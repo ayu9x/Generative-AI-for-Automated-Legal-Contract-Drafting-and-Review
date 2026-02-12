@@ -15,6 +15,11 @@ from app.api.routes import auth, contracts, review, compliance, versions
 from app.api.routes import templates as templates_routes
 from app.api.routes import audit_routes
 from app.api.routes import clauses as clauses_routes
+from app.api.routes import compare as compare_routes
+from app.api.routes import notifications as notifications_routes
+from app.api.routes import assistant as assistant_routes
+from app.api.routes import reports as reports_routes
+from app.api.routes import calendar as calendar_routes
 from app.api.middleware.security import (
     RateLimitMiddleware,
     SecurityHeadersMiddleware,
@@ -141,6 +146,11 @@ def create_app() -> FastAPI:
     app.include_router(templates_routes.router, prefix=api_prefix)
     app.include_router(audit_routes.router, prefix=api_prefix)
     app.include_router(clauses_routes.router, prefix=api_prefix)
+    app.include_router(compare_routes.router, prefix=api_prefix)
+    app.include_router(notifications_routes.router, prefix=api_prefix)
+    app.include_router(assistant_routes.router, prefix=api_prefix)
+    app.include_router(reports_routes.router, prefix=api_prefix)
+    app.include_router(calendar_routes.router, prefix=api_prefix)
 
     # ── Health & Root Endpoints ──────────────────────────────────────
 

@@ -1,5 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import NotificationCenter from './NotificationCenter';
 import {
   FileText,
   Shield,
@@ -12,6 +13,10 @@ import {
   BookOpen,
   ClipboardList,
   Settings,
+  GitCompare,
+  MessageSquare,
+  BarChart2,
+  Calendar,
 } from 'lucide-react';
 
 const navItems = [
@@ -19,6 +24,10 @@ const navItems = [
   { path: '/generate', label: 'Generate Contract', icon: Plus },
   { path: '/templates', label: 'Templates', icon: FolderOpen },
   { path: '/clauses', label: 'Clause Library', icon: BookOpen },
+  { path: '/compare', label: 'Compare Contracts', icon: GitCompare },
+  { path: '/assistant', label: 'AI Assistant', icon: MessageSquare },
+  { path: '/reports', label: 'Reports', icon: BarChart2 },
+  { path: '/calendar', label: 'Calendar', icon: Calendar },
   { path: '/risk-analysis', label: 'Risk Analysis', icon: AlertTriangle },
   { path: '/compliance', label: 'Compliance', icon: Shield },
 ];
@@ -36,7 +45,7 @@ export default function Layout() {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
-      <aside className="w-64 bg-legal-dark text-white flex flex-col">
+      <aside className="w-64 bg-legal-dark text-white flex flex-col shrink-0">
         <div className="p-6 border-b border-gray-700">
           <h1 className="text-xl font-bold flex items-center gap-2">
             <FileText className="w-6 h-6 text-primary-400" />
@@ -45,7 +54,7 @@ export default function Layout() {
           <p className="text-xs text-gray-400 mt-1">Contract Intelligence</p>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
           {/* Main nav */}
           {navItems.map(({ path, label, icon: Icon }) => {
             const active = location.pathname === path;
@@ -54,8 +63,8 @@ export default function Layout() {
                 key={path}
                 to={path}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-colors ${active
-                    ? 'bg-primary-600 text-white'
-                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                  ? 'bg-primary-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
                   }`}
               >
                 <Icon className="w-5 h-5" />
@@ -79,8 +88,8 @@ export default function Layout() {
                     key={path}
                     to={path}
                     className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-colors ${active
-                        ? 'bg-primary-600 text-white'
-                        : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                      ? 'bg-primary-600 text-white'
+                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
                       }`}
                   >
                     <Icon className="w-5 h-5" />
@@ -107,8 +116,8 @@ export default function Layout() {
             <Link
               to="/settings"
               className={`flex items-center gap-2 px-4 py-2 w-full text-sm rounded-lg transition-colors ${location.pathname === '/settings'
-                  ? 'bg-primary-600 text-white'
-                  : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                ? 'bg-primary-600 text-white'
+                : 'text-gray-300 hover:text-white hover:bg-gray-800'
                 }`}
             >
               <Settings className="w-4 h-4" />
@@ -125,10 +134,28 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        <Outlet />
-      </main>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Header */}
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0 z-20 shadow-sm relative">
+          <div className="flex items-center gap-4">
+            {/* Breadcrumb or Page Title could go here */}
+            <h2 className="font-semibold text-gray-800">
+              {navItems.find(i => i.path === location.pathname)?.label ||
+                adminNav.find(i => i.path === location.pathname)?.label ||
+                (location.pathname === '/settings' ? 'Settings' : '')}
+            </h2>
+          </div>
+          <div className="flex items-center gap-4">
+            <NotificationCenter />
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <main className="flex-1 overflow-auto bg-gray-50/50">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

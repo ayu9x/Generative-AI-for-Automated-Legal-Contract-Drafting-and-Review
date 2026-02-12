@@ -165,4 +165,48 @@ export const clausesAPI = {
     api.post('/clauses/explain', data),
 };
 
+// ── Compare API ────────────────────────────────────────────────────
+
+export const compareAPI = {
+  compare: (data: { text_a: string; text_b: string; label_a?: string; label_b?: string }) =>
+    api.post('/compare/', data),
+  getSummary: () => api.get('/compare/summary'),
+};
+
+// ── Notifications API ──────────────────────────────────────────────
+
+export const notificationsAPI = {
+  list: (params?: { unread_only?: boolean; page?: number; page_size?: number }) =>
+    api.get('/notifications/', { params }),
+  markAsRead: (id: string) => api.put(`/notifications/${id}/read`),
+  markAllRead: () => api.put('/notifications/read-all'),
+  getUnreadCount: () => api.get('/notifications/unread-count'),
+};
+
+// ── Assistant API ──────────────────────────────────────────────────
+
+export const assistantAPI = {
+  chat: (data: { message: string; context?: string }) =>
+    api.post('/assistant/chat', data),
+  getSuggestions: () => api.get('/assistant/suggestions'),
+};
+
+// ── Reports API ────────────────────────────────────────────────────
+
+export const reportsAPI = {
+  getAnalytics: () => api.get('/reports/analytics'),
+  exportContract: (contractId: string, format?: string) =>
+    api.get(`/reports/export/${contractId}`, { params: { format } }),
+  getSummary: () => api.get('/reports/summary'),
+};
+
+// ── Calendar API ───────────────────────────────────────────────────
+
+export const calendarAPI = {
+  getEvents: (params?: { month?: number; year?: number; event_type?: string }) =>
+    api.get('/calendar/events', { params }),
+  getUpcoming: (days?: number) => api.get('/calendar/upcoming', { params: { days } }),
+  getEventTypes: () => api.get('/calendar/event-types'),
+};
+
 export default api;

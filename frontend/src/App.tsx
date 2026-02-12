@@ -12,6 +12,10 @@ import TemplateLibrary from './pages/TemplateLibrary';
 import ClauseLibrary from './pages/ClauseLibrary';
 import AuditLogs from './pages/AuditLogs';
 import Settings from './pages/Settings';
+import ContractCompare from './pages/ContractCompare';
+import AIAssistant from './pages/AIAssistant';
+import Reports from './pages/Reports';
+import ContractCalendar from './pages/ContractCalendar';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -40,6 +44,10 @@ export default function App() {
         <Route path="clauses" element={<ClauseLibrary />} />
         <Route path="audit-logs" element={<AuditLogs />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="compare" element={<ContractCompare />} />
+        <Route path="assistant" element={<AIAssistant />} />
+        <Route path="reports" element={<Reports />} />
+        <Route path="calendar" element={<ContractCalendar />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
