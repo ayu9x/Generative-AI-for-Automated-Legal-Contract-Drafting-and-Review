@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/React-18.2-61DAFB?style=for-the-badge&logo=react&logoColor=black" />
   <img src="https://img.shields.io/badge/TypeScript-5.2-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
   <img src="https://img.shields.io/badge/Vite-5.0-646CFF?style=for-the-badge&logo=vite&logoColor=white" />
-  <img src="https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
 </p>
 
 # ⚖️ Generative AI for Automated Legal Contract Drafting & Review
@@ -517,7 +517,7 @@ See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for production deployment instruc
 
 ## 📄 License
 
-**Proprietary** — myOnsite Healthcare, LLC. All rights reserved.
+This project is licensed under the [MIT License](LICENSE).
 
 ---
 

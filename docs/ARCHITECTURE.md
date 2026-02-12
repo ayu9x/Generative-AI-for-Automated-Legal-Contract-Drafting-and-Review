@@ -2,7 +2,7 @@
 
 ## Generative AI for Automated Legal Contract Drafting and Review
 
-**Organization:** myOnsite Healthcare, LLC  
+**Version:** 1.0.0  
 **Version:** 1.0.0  
 **Date:** August 2025
 

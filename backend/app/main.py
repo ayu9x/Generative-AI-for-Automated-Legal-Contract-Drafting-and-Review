@@ -1,8 +1,6 @@
 """
 Generative AI for Automated Legal Contract Drafting and Review
 Main FastAPI Application Entry Point
-
-myOnsite Healthcare, LLC - August 2025
 """
 
 import logging
@@ -146,7 +144,6 @@ def create_app() -> FastAPI:
             "name": "Legal AI Contract System",
             "version": "1.0.0",
             "description": "Generative AI for Automated Legal Contract Drafting and Review",
-            "organization": "myOnsite Healthcare, LLC",
             "docs": "/docs",
             "health": "/health",
         }
