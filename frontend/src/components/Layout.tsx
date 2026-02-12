@@ -17,17 +17,19 @@ import {
   MessageSquare,
   BarChart2,
   Calendar,
+  GitBranch,
+  PenTool,
+  HardDrive,
 } from 'lucide-react';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: Home },
   { path: '/generate', label: 'Generate Contract', icon: Plus },
   { path: '/templates', label: 'Templates', icon: FolderOpen },
-  { path: '/clauses', label: 'Clause Library', icon: BookOpen },
-  { path: '/compare', label: 'Compare Contracts', icon: GitCompare },
-  { path: '/assistant', label: 'AI Assistant', icon: MessageSquare },
-  { path: '/reports', label: 'Reports', icon: BarChart2 },
-  { path: '/calendar', label: 'Calendar', icon: Calendar },
+  { path: '/workflows', label: 'Workflows', icon: GitBranch },
+  { path: '/sign', label: 'E-Signature', icon: PenTool },
+  { path: '/collaboration', label: 'Collaboration', icon: MessageSquare },
+  { path: '/drive', label: 'Document Drive', icon: HardDrive },
   { path: '/risk-analysis', label: 'Risk Analysis', icon: AlertTriangle },
   { path: '/compliance', label: 'Compliance', icon: Shield },
 ];

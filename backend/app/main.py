@@ -20,11 +20,17 @@ from app.api.routes import notifications as notifications_routes
 from app.api.routes import assistant as assistant_routes
 from app.api.routes import reports as reports_routes
 from app.api.routes import calendar as calendar_routes
+from app.api.routes import workflows as workflows_routes
+from app.api.routes import signature as signature_routes
+from app.api.routes import collaboration as collaboration_routes
+from app.api.routes import drive as drive_routes
 from app.api.middleware.security import (
     RateLimitMiddleware,
     SecurityHeadersMiddleware,
     RequestValidationMiddleware,
 )
+
+
 from app.api.middleware.audit import AuditLogMiddleware
 from app.core.exceptions import (
     AuthenticationError,
@@ -151,6 +157,10 @@ def create_app() -> FastAPI:
     app.include_router(assistant_routes.router, prefix=api_prefix)
     app.include_router(reports_routes.router, prefix=api_prefix)
     app.include_router(calendar_routes.router, prefix=api_prefix)
+    app.include_router(workflows_routes.router, prefix=api_prefix)
+    app.include_router(signature_routes.router, prefix=api_prefix)
+    app.include_router(collaboration_routes.router, prefix=api_prefix)
+    app.include_router(drive_routes.router, prefix=api_prefix)
 
     # ── Health & Root Endpoints ──────────────────────────────────────
 

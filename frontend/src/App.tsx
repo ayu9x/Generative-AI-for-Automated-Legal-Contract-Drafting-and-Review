@@ -16,6 +16,10 @@ import ContractCompare from './pages/ContractCompare';
 import AIAssistant from './pages/AIAssistant';
 import Reports from './pages/Reports';
 import ContractCalendar from './pages/ContractCalendar';
+import Workflows from './pages/Workflows';
+import ESignature from './pages/ESignature';
+import Collaboration from './pages/Collaboration';
+import DocumentDrive from './pages/DocumentDrive';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -48,6 +52,10 @@ export default function App() {
         <Route path="assistant" element={<AIAssistant />} />
         <Route path="reports" element={<Reports />} />
         <Route path="calendar" element={<ContractCalendar />} />
+        <Route path="workflows" element={<Workflows />} />
+        <Route path="sign" element={<ESignature />} />
+        <Route path="collaboration" element={<Collaboration />} />
+        <Route path="drive" element={<DocumentDrive />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

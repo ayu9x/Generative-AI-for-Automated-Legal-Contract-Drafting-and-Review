@@ -209,4 +209,53 @@ export const calendarAPI = {
   getEventTypes: () => api.get('/calendar/event-types'),
 };
 
+// ── Workflows API ──────────────────────────────────────────────────
+
+export const workflowsAPI = {
+  list: () => api.get('/workflows/'),
+  create: (data: { name: string; description?: string; steps: any[] }) =>
+    api.post('/workflows/', data),
+  get: (id: string) => api.get(`/workflows/${id}`),
+  approveStep: (workflowId: string, stepId: string) =>
+    api.post(`/workflows/${workflowId}/approve-step/${stepId}`),
+};
+
+// ── Signature API ──────────────────────────────────────────────────
+
+export const signatureAPI = {
+  sign: (data: { contract_id: string; signer_name: string; signature_data: string }) =>
+    api.post('/signature/sign', data),
+  getAuditTrail: (contractId: string) => api.get(`/signature/audit/${contractId}`),
+};
+
+// ── Collaboration API ──────────────────────────────────────────────
+
+export const collaborationAPI = {
+  getTasks: () => api.get('/collaboration/tasks'),
+  createTask: (data: any) => api.post('/collaboration/tasks', data),
+  updateTaskStatus: (taskId: string, status: string) =>
+    api.put(`/collaboration/tasks/${taskId}/status`, null, { params: { status } }),
+  getComments: (contractId: string) => api.get(`/collaboration/comments/${contractId}`),
+  addComment: (data: { contract_id: string; user_name: string; text: string }) =>
+    api.post('/collaboration/comments', data),
+  getActivityFeed: () => api.get('/collaboration/activity'),
+};
+
+// ── Drive API ──────────────────────────────────────────────────────
+
+export const driveAPI = {
+  listFiles: (parentId?: string) => api.get('/drive/files', { params: { parent_id: parentId } }),
+  createFolder: (name: string, parentId?: string) =>
+    api.post('/drive/folder', null, { params: { name, parent_id: parentId } }),
+  uploadFile: (file: File, parentId?: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/drive/upload', formData, {
+      params: { parent_id: parentId },
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  deleteItem: (itemId: string) => api.delete(`/drive/${itemId}`),
+};
+
 export default api;
