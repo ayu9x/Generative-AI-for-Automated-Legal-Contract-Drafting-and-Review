@@ -136,4 +136,33 @@ export const versionsAPI = {
     api.post('/versions/approve', data, { params: { contract_id: contractId } }),
 };
 
+// ── Templates API ──────────────────────────────────────────────────
+
+export const templatesAPI = {
+  list: (params?: { category?: string; jurisdiction?: string; risk_level?: string; search?: string; page?: number; page_size?: number }) =>
+    api.get('/templates/', { params }),
+  get: (templateId: string) => api.get(`/templates/${templateId}`),
+  getCategories: () => api.get('/templates/categories'),
+};
+
+// ── Audit API ──────────────────────────────────────────────────────
+
+export const auditAPI = {
+  getLogs: (params?: { action?: string; resource?: string; user_email?: string; status?: string; page?: number; page_size?: number }) =>
+    api.get('/audit/logs', { params }),
+  getStats: () => api.get('/audit/stats'),
+  getActions: () => api.get('/audit/actions'),
+};
+
+// ── Clauses API ────────────────────────────────────────────────────
+
+export const clausesAPI = {
+  list: (params?: { category?: string; jurisdiction?: string; risk_level?: string; search?: string; page?: number; page_size?: number }) =>
+    api.get('/clauses/', { params }),
+  get: (clauseId: string) => api.get(`/clauses/${clauseId}`),
+  getCategories: () => api.get('/clauses/categories'),
+  explain: (data: { clause_text: string; audience?: string }) =>
+    api.post('/clauses/explain', data),
+};
+
 export default api;

@@ -8,6 +8,10 @@ import ContractView from './pages/ContractView';
 import RiskAnalysis from './pages/RiskAnalysis';
 import ComplianceCenter from './pages/ComplianceCenter';
 import VersionHistory from './pages/VersionHistory';
+import TemplateLibrary from './pages/TemplateLibrary';
+import ClauseLibrary from './pages/ClauseLibrary';
+import AuditLogs from './pages/AuditLogs';
+import Settings from './pages/Settings';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -32,6 +36,10 @@ export default function App() {
         <Route path="risk-analysis" element={<RiskAnalysis />} />
         <Route path="compliance" element={<ComplianceCenter />} />
         <Route path="versions/:contractId" element={<VersionHistory />} />
+        <Route path="templates" element={<TemplateLibrary />} />
+        <Route path="clauses" element={<ClauseLibrary />} />
+        <Route path="audit-logs" element={<AuditLogs />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

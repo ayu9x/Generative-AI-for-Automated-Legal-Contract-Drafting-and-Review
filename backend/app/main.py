@@ -12,6 +12,9 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.api.routes import auth, contracts, review, compliance, versions
+from app.api.routes import templates as templates_routes
+from app.api.routes import audit_routes
+from app.api.routes import clauses as clauses_routes
 from app.api.middleware.security import (
     RateLimitMiddleware,
     SecurityHeadersMiddleware,
@@ -135,6 +138,9 @@ def create_app() -> FastAPI:
     app.include_router(review.router, prefix=api_prefix)
     app.include_router(compliance.router, prefix=api_prefix)
     app.include_router(versions.router, prefix=api_prefix)
+    app.include_router(templates_routes.router, prefix=api_prefix)
+    app.include_router(audit_routes.router, prefix=api_prefix)
+    app.include_router(clauses_routes.router, prefix=api_prefix)
 
     # ── Health & Root Endpoints ──────────────────────────────────────
 
