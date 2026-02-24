@@ -45,9 +45,9 @@ def _seed_collaboration():
         return
 
     _tasks.extend([
-        Task(id="1", title="Review NDA Clauses", status="todo", assignee="Legal Team", priority="high", due_date="202X-05-15"),
-        Task(id="2", title="Approve Vendor Agreement", status="in_progress", assignee="John Doe", priority="medium", due_date="202X-05-20"),
-        Task(id="3", title="Check Compliance (GDPR)", status="done", assignee="Sarah Smith", priority="high", due_date="202X-05-10"),
+        Task(id="1", title="Review NDA Clauses", status="todo", assignee="Legal Team", priority="high", due_date="2026-03-15"),
+        Task(id="2", title="Approve Vendor Agreement", status="in_progress", assignee="John Doe", priority="medium", due_date="2026-03-20"),
+        Task(id="3", title="Check Compliance (GDPR)", status="done", assignee="Sarah Smith", priority="high", due_date="2026-03-10"),
     ])
     
     _seeded = True
