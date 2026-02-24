@@ -65,7 +65,7 @@ export default function SmartSearch() {
     });
 
     // Use real data if available, otherwise mock
-    const allContracts = (contractsData?.data?.length > 0 ? contractsData.data : generateMockContracts()) as any[];
+    const allContracts = (contractsData?.data && contractsData.data.length > 0 ? contractsData.data : generateMockContracts()) as any[];
 
     // Filter logic
     const filtered = allContracts.filter((c: any) => {

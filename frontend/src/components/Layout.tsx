@@ -20,12 +20,18 @@ import {
   Search,
   BarChart3,
   BookOpen,
+  Library,
+  CalendarDays,
+  GitCompareArrows,
+  Bot,
+  LineChart,
 } from 'lucide-react';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: Home },
   { path: '/generate', label: 'Generate Contract', icon: Plus },
   { path: '/templates', label: 'Templates', icon: FolderOpen },
+  { path: '/clauses', label: 'Clause Library', icon: Library },
   { path: '/workflows', label: 'Workflows', icon: GitBranch },
   { path: '/sign', label: 'E-Signature', icon: PenTool },
   { path: '/collaboration', label: 'Collaboration', icon: MessageSquare },
@@ -34,7 +40,11 @@ const navItems = [
   { path: '/risk-analysis', label: 'Risk Analysis', icon: AlertTriangle },
   { path: '/compliance', label: 'Compliance', icon: Shield },
   { path: '/search', label: 'Smart Search', icon: Search },
+  { path: '/compare', label: 'Compare Contracts', icon: GitCompareArrows },
   { path: '/insights', label: 'Contract Insights', icon: BarChart3 },
+  { path: '/reports', label: 'Reports', icon: LineChart },
+  { path: '/calendar', label: 'Calendar', icon: CalendarDays },
+  { path: '/assistant', label: 'AI Assistant', icon: Bot },
   { path: '/knowledge', label: 'Knowledge Base', icon: BookOpen },
 ];
 
