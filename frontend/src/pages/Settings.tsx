@@ -75,7 +75,7 @@ export default function Settings() {
     const handleGenerateApiKey = async () => {
         setGeneratingKey(true);
         try {
-            const res = await authAPI.refreshToken(useAuthStore.getState().refreshToken || '');
+            await authAPI.refreshToken(useAuthStore.getState().refreshToken || '');
             // Use a dedicated endpoint if available
             const keyRes = await fetch('/api/v1/auth/api-key', {
                 method: 'POST',

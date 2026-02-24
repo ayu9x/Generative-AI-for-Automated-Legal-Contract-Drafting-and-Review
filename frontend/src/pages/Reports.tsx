@@ -10,9 +10,6 @@ import {
     Activity,
     Shield,
     Clock,
-    CheckCircle,
-    XCircle,
-    AlertTriangle,
 } from 'lucide-react';
 import {
     BarChart,
@@ -47,7 +44,6 @@ export default function Reports() {
     }
 
     const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
-    const RISK_COLORS = ['#EF4444', '#F59E0B', '#10B981'];
 
     return (
         <div className="p-8 max-w-7xl mx-auto space-y-8">
@@ -129,9 +125,9 @@ export default function Reports() {
                                 paddingAngle={5}
                                 dataKey="count"
                                 nameKey="type"
-                                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                label={({ name, percent }: any) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                             >
-                                {analytics.type_distribution.map((entry: any, index: number) => (
+                                {analytics.type_distribution.map((_entry: any, index: number) => (
                                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                 ))}
                             </Pie>

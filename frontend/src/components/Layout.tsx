@@ -10,16 +10,16 @@ import {
   LogOut,
   User,
   FolderOpen,
-  BookOpen,
   ClipboardList,
   Settings,
-  GitCompare,
   MessageSquare,
-  BarChart2,
-  Calendar,
   GitBranch,
   PenTool,
   HardDrive,
+  FileUp,
+  Search,
+  BarChart3,
+  BookOpen,
 } from 'lucide-react';
 
 const navItems = [
@@ -30,8 +30,12 @@ const navItems = [
   { path: '/sign', label: 'E-Signature', icon: PenTool },
   { path: '/collaboration', label: 'Collaboration', icon: MessageSquare },
   { path: '/drive', label: 'Document Drive', icon: HardDrive },
+  { path: '/upload-analysis', label: 'Upload & Analyze', icon: FileUp },
   { path: '/risk-analysis', label: 'Risk Analysis', icon: AlertTriangle },
   { path: '/compliance', label: 'Compliance', icon: Shield },
+  { path: '/search', label: 'Smart Search', icon: Search },
+  { path: '/insights', label: 'Contract Insights', icon: BarChart3 },
+  { path: '/knowledge', label: 'Knowledge Base', icon: BookOpen },
 ];
 
 const adminNav = [

@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     WORKERS: int = 4
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
+    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173", "http://localhost:8000"]
 
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/legal_contracts"
@@ -50,6 +50,12 @@ class Settings(BaseSettings):
     LLM_MAX_TOKENS: int = 4096
     LLM_TEMPERATURE: float = 0.1
     LLM_REQUEST_TIMEOUT: int = 120
+
+    # Web Search
+    GOOGLE_API_KEY: Optional[str] = None
+    GOOGLE_SEARCH_CX: Optional[str] = None
+    WEB_SEARCH_ENABLED: bool = True
+    WEB_SEARCH_MAX_RESULTS: int = 5
 
     # Elasticsearch
     ELASTICSEARCH_URL: str = "http://localhost:9200"

@@ -8,11 +8,7 @@ import {
     CheckCircle,
     Clock,
     Play,
-    MoreVertical,
-    ArrowRight,
-    Shield,
     DollarSign,
-    FileText,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -69,8 +65,8 @@ export default function Workflows() {
                                     key={wf.id}
                                     onClick={() => setSelectedWorkflow(wf)}
                                     className={`p-4 rounded-lg cursor-pointer border transition-all ${selectedWorkflow?.id === wf.id
-                                            ? 'bg-primary-50 border-primary-200 shadow-sm'
-                                            : 'bg-white border-transparent hover:bg-gray-50 hover:border-gray-200'
+                                        ? 'bg-primary-50 border-primary-200 shadow-sm'
+                                        : 'bg-white border-transparent hover:bg-gray-50 hover:border-gray-200'
                                         }`}
                                 >
                                     <div className="flex justify-between items-start mb-2">
@@ -108,7 +104,7 @@ export default function Workflows() {
                                     {/* Vertical Line */}
                                     <div className="absolute left-1/2 top-4 bottom-4 w-0.5 bg-gray-200 -translate-x-1/2 z-0" />
 
-                                    {selectedWorkflow.steps.map((step: any, index: number) => {
+                                    {selectedWorkflow.steps.map((step: any, _index: number) => {
                                         const isCompleted = step.status === 'approved';
                                         const isActive = step.status === 'active' || step.status === 'pending'; // In this simple mock, pending implies waiting
                                         const isPending = step.status === 'pending';

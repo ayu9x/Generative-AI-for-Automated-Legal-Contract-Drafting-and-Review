@@ -17,7 +17,6 @@ export default function DocumentDrive() {
     const queryClient = useQueryClient();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [currentFolder, setCurrentFolder] = useState<any>(null); // null = root
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
     const { data: filesData, isLoading } = useQuery({
         queryKey: ['drive-files', currentFolder?.id],

@@ -3,20 +3,20 @@ import { useRef, useState } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { signatureAPI, contractsAPI } from '../services/api';
-import { PenTool, Undo, Download, ShieldCheck, History, FileText } from 'lucide-react';
+import { PenTool, Undo, ShieldCheck, History, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function ESignature() {
     const sigCanvas = useRef<any>(null);
     const [trimmedDataURL, setTrimmedDataURL] = useState<string | null>(null);
-    const [selectedContractId, setSelectedContractId] = useState<string>('c1'); // Mock selection
-    const [signerName, setSignerName] = useState('John Doe'); // Mock user
+    const [selectedContractId] = useState<string>('c1'); // Mock selection
+    const [signerName] = useState('John Doe'); // Mock user
 
-    const { data: contractsData } = useQuery({ queryKey: ['contracts'], queryFn: () => contractsAPI.list() });
+    const { data: _contractsData } = useQuery({ queryKey: ['contracts'], queryFn: () => contractsAPI.list() });
     const { data: auditData } = useQuery({
         queryKey: ['audit-trail', selectedContractId],
         queryFn: () => signatureAPI.getAuditTrail(selectedContractId),
-        enabled: !!trimmedDataURL // Fetch audit after signing
+        enabled: !!selectedContractId // Always fetch when contract is selected
     });
 
     const signMutation = useMutation({

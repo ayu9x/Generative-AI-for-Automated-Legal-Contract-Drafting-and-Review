@@ -2,12 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { assistantAPI } from '../services/api';
 import {
-    MessageSquare,
     Send,
     Bot,
     User,
     Sparkles,
-    Lightbulb,
     ArrowRight,
     Loader2,
 } from 'lucide-react';
@@ -116,8 +114,8 @@ export default function AIAssistant() {
 
                             <div className={`flex flex-col max-w-[80%] ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
                                 <div className={`rounded-2xl p-4 shadow-sm text-sm whitespace-pre-wrap leading-relaxed ${msg.sender === 'user'
-                                        ? 'bg-gray-900 text-white rounded-tr-sm'
-                                        : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm'
+                                    ? 'bg-gray-900 text-white rounded-tr-sm'
+                                    : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm'
                                     }`}>
                                     {msg.text}
                                 </div>

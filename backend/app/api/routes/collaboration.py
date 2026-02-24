@@ -1,7 +1,7 @@
 
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Optional, Dict
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
 import uuid
 
@@ -11,7 +11,7 @@ router = APIRouter(
 )
 
 class Task(BaseModel):
-    id: str
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     title: str
     description: Optional[str] = None
     status: str  # todo, in_progress, done
@@ -20,11 +20,11 @@ class Task(BaseModel):
     priority: str = "medium"
 
 class Comment(BaseModel):
-    id: str
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     contract_id: str
     user_name: str
     text: str
-    created_at: str
+    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
 
 class Activity(BaseModel):
     id: str
@@ -52,9 +52,6 @@ def _seed_collaboration():
     
     _seeded = True
 
-@router.on_event("startup")
-async def startup_event():
-    _seed_collaboration()
 
 @router.get("/tasks", response_model=List[Task])
 async def list_tasks():
@@ -62,7 +59,6 @@ async def list_tasks():
 
 @router.post("/tasks", response_model=Task)
 async def create_task(task: Task):
-    task.id = str(uuid.uuid4())
     _tasks.append(task)
     return task
 

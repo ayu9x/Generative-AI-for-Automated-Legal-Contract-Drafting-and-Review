@@ -20,6 +20,10 @@ import Workflows from './pages/Workflows';
 import ESignature from './pages/ESignature';
 import Collaboration from './pages/Collaboration';
 import DocumentDrive from './pages/DocumentDrive';
+import AgreementUploadAnalyzer from './pages/AgreementUploadAnalyzer';
+import SmartSearch from './pages/SmartSearch';
+import ContractInsights from './pages/ContractInsights';
+import LegalKnowledgeBase from './pages/LegalKnowledgeBase';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -56,6 +60,10 @@ export default function App() {
         <Route path="sign" element={<ESignature />} />
         <Route path="collaboration" element={<Collaboration />} />
         <Route path="drive" element={<DocumentDrive />} />
+        <Route path="upload-analysis" element={<AgreementUploadAnalyzer />} />
+        <Route path="search" element={<SmartSearch />} />
+        <Route path="insights" element={<ContractInsights />} />
+        <Route path="knowledge" element={<LegalKnowledgeBase />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -1,13 +1,10 @@
 import { useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { compareAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import {
     GitCompare,
-    ArrowRight,
-    Maximize2,
     AlertTriangle,
-    CheckCircle,
     FileText,
     Activity,
 } from 'lucide-react';
@@ -57,10 +54,6 @@ export default function ContractCompare() {
         },
     });
 
-    const { data: summaryData } = useQuery({
-        queryKey: ['compare-summary'],
-        queryFn: () => compareAPI.getSummary(),
-    });
 
     const handleCompare = () => {
         if (!textA.trim() || !textB.trim()) {
@@ -79,14 +72,6 @@ export default function ContractCompare() {
         }
     };
 
-    const getTextColor = (type: string) => {
-        switch (type) {
-            case 'added': return 'text-green-700';
-            case 'removed': return 'text-red-700';
-            case 'modified': return 'text-yellow-700';
-            default: return 'text-gray-600';
-        }
-    };
 
     return (
         <div className="p-8 max-w-7xl mx-auto">

@@ -44,9 +44,6 @@ def _seed_drive():
 
     _seeded = True
 
-@router.on_event("startup")
-async def startup_event():
-    _seed_drive()
 
 @router.get("/files", response_model=List[DriveItem])
 async def list_files(parent_id: Optional[str] = None):
@@ -74,7 +71,7 @@ async def upload_file(file: UploadFile = File(...), parent_id: Optional[str] = N
         name=file.filename,
         type="file",
         parent_id=parent_id,
-        size=f"{file.size or 0/1024:.1f} KB",
+        size=f"{(file.size or 0) / 1024:.1f} KB",
         modified_at=datetime.utcnow().isoformat(),
         owner="me"
     )

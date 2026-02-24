@@ -78,9 +78,7 @@ def _seed_workflows():
     
     _seeded = True
 
-@router.on_event("startup")
-async def startup_event():
-    _seed_workflows()
+
 
 @router.get("/", response_model=List[Workflow])
 async def list_workflows():

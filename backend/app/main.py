@@ -24,6 +24,7 @@ from app.api.routes import workflows as workflows_routes
 from app.api.routes import signature as signature_routes
 from app.api.routes import collaboration as collaboration_routes
 from app.api.routes import drive as drive_routes
+from app.api.routes import search_api as search_routes
 from app.api.middleware.security import (
     RateLimitMiddleware,
     SecurityHeadersMiddleware,
@@ -84,6 +85,18 @@ async def lifespan(app: FastAPI):
         logger.info("Cache service initialized")
     except Exception as e:
         logger.warning(f"Redis not available: {e}. Running without cache.")
+
+    # Seed in-memory stores for demo data
+    try:
+        from app.api.routes.drive import _seed_drive
+        from app.api.routes.collaboration import _seed_collaboration
+        from app.api.routes.workflows import _seed_workflows
+        _seed_drive()
+        _seed_collaboration()
+        _seed_workflows()
+        logger.info("Demo data seeded successfully")
+    except Exception as e:
+        logger.warning(f"Seeding demo data failed: {e}")
 
     logger.info("All services initialized successfully")
 
@@ -161,6 +174,7 @@ def create_app() -> FastAPI:
     app.include_router(signature_routes.router, prefix=api_prefix)
     app.include_router(collaboration_routes.router, prefix=api_prefix)
     app.include_router(drive_routes.router, prefix=api_prefix)
+    app.include_router(search_routes.router, prefix=api_prefix)
 
     # ── Health & Root Endpoints ──────────────────────────────────────
 

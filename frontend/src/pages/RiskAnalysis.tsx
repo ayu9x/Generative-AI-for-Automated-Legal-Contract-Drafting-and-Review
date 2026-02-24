@@ -93,10 +93,56 @@ export default function RiskAnalysis() {
                   onChange={(e) => setJurisdiction(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                 >
-                  <option value="US-Federal">US Federal</option>
-                  <option value="US-CA">California</option>
-                  <option value="EU">European Union</option>
-                  <option value="UK">United Kingdom</option>
+                  <optgroup label="North America">
+                    <option value="US-Federal">US Federal</option>
+                    <option value="US-CA">US — California</option>
+                    <option value="US-NY">US — New York</option>
+                    <option value="US-TX">US — Texas</option>
+                    <option value="US-FL">US — Florida</option>
+                    <option value="CA">Canada</option>
+                    <option value="MX">Mexico</option>
+                  </optgroup>
+                  <optgroup label="Europe">
+                    <option value="EU">European Union</option>
+                    <option value="UK">United Kingdom</option>
+                    <option value="DE">Germany</option>
+                    <option value="FR">France</option>
+                    <option value="IT">Italy</option>
+                    <option value="ES">Spain</option>
+                    <option value="NL">Netherlands</option>
+                    <option value="CH">Switzerland</option>
+                  </optgroup>
+                  <optgroup label="Asia Pacific">
+                    <option value="IN">India</option>
+                    <option value="CN">China</option>
+                    <option value="JP">Japan</option>
+                    <option value="SG">Singapore</option>
+                    <option value="AU">Australia</option>
+                    <option value="KR">South Korea</option>
+                    <option value="HK">Hong Kong</option>
+                    <option value="MY">Malaysia</option>
+                    <option value="ID">Indonesia</option>
+                    <option value="PH">Philippines</option>
+                    <option value="NZ">New Zealand</option>
+                  </optgroup>
+                  <optgroup label="Middle East & Africa">
+                    <option value="AE">United Arab Emirates</option>
+                    <option value="SA">Saudi Arabia</option>
+                    <option value="IL">Israel</option>
+                    <option value="ZA">South Africa</option>
+                    <option value="NG">Nigeria</option>
+                    <option value="KE">Kenya</option>
+                  </optgroup>
+                  <optgroup label="South America">
+                    <option value="BR">Brazil</option>
+                    <option value="AR">Argentina</option>
+                    <option value="CL">Chile</option>
+                    <option value="CO">Colombia</option>
+                  </optgroup>
+                  <optgroup label="Regulatory Frameworks">
+                    <option value="HIPAA">HIPAA (US Healthcare)</option>
+                    <option value="GDPR">GDPR (EU Data Privacy)</option>
+                  </optgroup>
                 </select>
               </div>
             </div>
@@ -138,9 +184,8 @@ export default function RiskAnalysis() {
                 <div className={`text-5xl font-bold ${riskScoreColor(result.overall_risk_score)}`}>
                   {(result.overall_risk_score * 100).toFixed(0)}%
                 </div>
-                <span className={`inline-block mt-2 px-3 py-1 rounded-full text-sm font-medium ${
-                  severityColor[result.risk_level] || 'bg-gray-100 text-gray-700'
-                }`}>
+                <span className={`inline-block mt-2 px-3 py-1 rounded-full text-sm font-medium ${severityColor[result.risk_level] || 'bg-gray-100 text-gray-700'
+                  }`}>
                   {result.risk_level.toUpperCase()}
                 </span>
               </div>

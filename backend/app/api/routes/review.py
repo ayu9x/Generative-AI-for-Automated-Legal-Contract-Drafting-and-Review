@@ -4,13 +4,16 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status
 from pydantic import BaseModel, Field
 
 from app.api.routes.auth import get_current_user, require_role
 from app.services.risk_analyzer import RiskAnalyzer
+from app.utils.document_processor import DocumentProcessor
 
 router = APIRouter(prefix="/review", tags=["Contract Review"])
+
+_document_processor = DocumentProcessor()
 
 
 # ── Request/Response Schemas ─────────────────────────────────────────
@@ -199,6 +202,132 @@ async def analyze_risk(
             _update_review_status(request.contract_id, risk_score=overall_score)
 
         return analysis
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Risk analysis failed: {str(e)}",
+        )
+
+
+@router.post("/upload-and-analyze")
+async def upload_and_analyze(
+    file: UploadFile = File(...),
+    contract_type: Optional[str] = Query(default=None),
+    jurisdiction: str = Query(default="US-Federal"),
+    current_user: dict = Depends(get_current_user),
+):
+    """Upload an existing agreement file and perform risk analysis on it."""
+    # Validate file type
+    allowed_types = (
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "text/plain",
+    )
+    # Also accept by file extension for browsers that may not send correct MIME
+    filename = file.filename or ""
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    allowed_extensions = ("pdf", "docx", "txt")
+
+    if file.content_type not in allowed_types and ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unsupported file type. Accepted formats: PDF, DOCX, TXT",
+        )
+
+    # Read file content
+    try:
+        raw_content = await file.read()
+        text_content = raw_content.decode("utf-8", errors="replace")
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Failed to read file content",
+        )
+
+    if not text_content.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded file is empty",
+        )
+
+    # Auto-detect contract type if not provided
+    detected_type = _document_processor.detect_contract_type(text_content)
+    effective_type = contract_type or detected_type
+
+    # Extract metadata
+    metadata = _document_processor.extract_metadata(text_content)
+    clauses = _document_processor.extract_clauses(text_content)
+
+    # Run risk analysis
+    try:
+        result = await _risk_analyzer.analyze(
+            content=text_content,
+            contract_type=effective_type,
+            jurisdiction=jurisdiction,
+        )
+
+        analysis_id = str(uuid4())
+        now = datetime.utcnow().isoformat()
+
+        risk_factors = []
+        critical = high = medium = low = 0
+        for factor in result.get("risk_factors", []):
+            severity = factor.get("severity", "medium")
+            if severity == "critical":
+                critical += 1
+            elif severity == "high":
+                high += 1
+            elif severity == "medium":
+                medium += 1
+            else:
+                low += 1
+
+            risk_factors.append({
+                "category": factor.get("category", "general"),
+                "name": factor.get("name", "Unknown"),
+                "severity": severity,
+                "description": factor.get("description", ""),
+                "recommendation": factor.get("recommendation", "Review required"),
+                "clause_reference": factor.get("clause_reference"),
+                "confidence": factor.get("confidence", 0.7),
+            })
+
+        overall_score = result.get("overall_risk_score", 0.5)
+        risk_level = (
+            "critical" if overall_score >= 0.8
+            else "high" if overall_score >= 0.6
+            else "medium" if overall_score >= 0.4
+            else "low"
+        )
+
+        analysis_result = {
+            "analysis_id": analysis_id,
+            "overall_risk_score": overall_score,
+            "risk_level": risk_level,
+            "total_factors": len(risk_factors),
+            "critical_count": critical,
+            "high_count": high,
+            "medium_count": medium,
+            "low_count": low,
+            "risk_factors": risk_factors,
+            "category_scores": result.get("category_scores", {}),
+            "executive_summary": result.get("executive_summary", "Risk analysis complete."),
+            "recommendations": result.get("recommendations", []),
+            "analyzed_at": now,
+            "file_info": {
+                "filename": filename,
+                "detected_contract_type": detected_type,
+                "effective_contract_type": effective_type,
+                "jurisdiction": jurisdiction,
+                "clauses_found": len(clauses),
+                "metadata": metadata,
+            },
+        }
+
+        _analyses_db[analysis_id] = analysis_result
+
+        return analysis_result
 
     except Exception as e:
         raise HTTPException(

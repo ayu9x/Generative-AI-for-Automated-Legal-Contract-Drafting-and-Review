@@ -1,11 +1,8 @@
 
-import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { collaborationAPI } from '../services/api';
 import {
     MessageSquare,
-    CheckCircle,
-    Clock,
     MoreHorizontal,
     Plus,
     User,
@@ -16,9 +13,8 @@ import toast from 'react-hot-toast';
 
 export default function Collaboration() {
     const queryClient = useQueryClient();
-    const [newTaskTitle, setNewTaskTitle] = useState('');
 
-    const { data: tasksData, isLoading: tasksLoading } = useQuery({
+    const { data: tasksData } = useQuery({
         queryKey: ['collab-tasks'],
         queryFn: () => collaborationAPI.getTasks(),
     });
@@ -37,7 +33,6 @@ export default function Collaboration() {
         }),
         onSuccess: () => {
             toast.success('Task created');
-            setNewTaskTitle('');
             queryClient.invalidateQueries({ queryKey: ['collab-tasks'] });
         },
     });

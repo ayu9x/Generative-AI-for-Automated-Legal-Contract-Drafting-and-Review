@@ -94,6 +94,14 @@ export const reviewAPI = {
   getComments: (contractId: string) => api.get(`/review/comments/${contractId}`),
   resolveComment: (commentId: string) => api.put(`/review/comments/${commentId}/resolve`),
   getStatus: (contractId: string) => api.get(`/review/status/${contractId}`),
+  uploadAndAnalyze: (file: File, contractType?: string, jurisdiction?: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/review/upload-and-analyze', formData, {
+      params: { contract_type: contractType, jurisdiction },
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 };
 
 // ── Compliance API ──────────────────────────────────────────────────

@@ -4,7 +4,6 @@ import { clausesAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import {
     Search,
-    Filter,
     BookOpen,
     Copy,
     Check,

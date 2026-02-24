@@ -28,11 +28,11 @@ export default function Login() {
         response = await authAPI.login(email, password);
       }
 
-      const { access_token, refresh_token, user_id, role } = response.data;
+      const { access_token, refresh_token, user_id, role, full_name: responseName } = response.data;
       login(access_token, refresh_token, {
         id: user_id,
         email,
-        full_name: fullName || email.split('@')[0],
+        full_name: responseName || fullName || email.split('@')[0],
         organization,
         role,
       });

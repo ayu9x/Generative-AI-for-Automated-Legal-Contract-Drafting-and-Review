@@ -17,8 +17,18 @@ const CONTRACT_TYPES = [
 ];
 
 const JURISDICTIONS = [
-  'US-Federal', 'US-CA', 'US-NY', 'US-TX', 'US-FL',
-  'EU', 'UK', 'HIPAA',
+  // North America
+  'US-Federal', 'US-CA', 'US-NY', 'US-TX', 'US-FL', 'CA', 'MX',
+  // Europe
+  'EU', 'UK', 'DE', 'FR', 'IT', 'ES', 'NL', 'CH',
+  // Asia Pacific
+  'IN', 'CN', 'JP', 'SG', 'AU', 'KR', 'HK', 'MY', 'ID', 'PH', 'NZ',
+  // Middle East & Africa
+  'AE', 'SA', 'IL', 'ZA', 'NG', 'KE',
+  // South America
+  'BR', 'AR', 'CL', 'CO',
+  // Regulatory
+  'HIPAA', 'GDPR',
 ];
 
 interface Party {
