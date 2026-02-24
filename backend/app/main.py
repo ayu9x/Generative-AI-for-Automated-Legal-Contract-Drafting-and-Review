@@ -4,11 +4,13 @@ Main FastAPI Application Entry Point
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.api.routes import auth, contracts, review, compliance, versions
@@ -176,17 +178,34 @@ def create_app() -> FastAPI:
     app.include_router(drive_routes.router, prefix=api_prefix)
     app.include_router(search_routes.router, prefix=api_prefix)
 
-    # ── Health & Root Endpoints ──────────────────────────────────────
+    # ── Serve Frontend Static Files (for .exe / production build) ────
+    static_dir = os.path.join(os.path.dirname(__file__), "static")
+    if os.path.isdir(static_dir):
+        logger.info(f"Serving frontend from {static_dir}")
 
-    @app.get("/", tags=["Root"])
-    async def root():
-        return {
-            "name": "Legal AI Contract System",
-            "version": "1.0.0",
-            "description": "Generative AI for Automated Legal Contract Drafting and Review",
-            "docs": "/docs",
-            "health": "/health",
-        }
+        @app.get("/app/{full_path:path}", include_in_schema=False)
+        async def serve_spa(full_path: str):
+            """Serve the SPA — fall back to index.html for client-side routes."""
+            file_path = os.path.join(static_dir, full_path)
+            if os.path.isfile(file_path):
+                return FileResponse(file_path)
+            return FileResponse(os.path.join(static_dir, "index.html"))
+
+        app.mount("/assets", StaticFiles(directory=os.path.join(static_dir, "assets")), name="static-assets")
+
+        @app.get("/", tags=["Root"], include_in_schema=False)
+        async def root():
+            return FileResponse(os.path.join(static_dir, "index.html"))
+    else:
+        @app.get("/", tags=["Root"])
+        async def root():
+            return {
+                "name": "Legal AI Contract System",
+                "version": "1.0.0",
+                "description": "Generative AI for Automated Legal Contract Drafting and Review",
+                "docs": "/docs",
+                "health": "/health",
+            }
 
     @app.get("/health", tags=["Health"])
     async def health_check():

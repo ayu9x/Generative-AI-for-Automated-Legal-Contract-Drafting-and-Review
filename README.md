@@ -243,11 +243,71 @@ The backend runs in **standalone demo mode** by default — no database or Redis
 | Python | 3.11+ | ✅ Yes |
 | Node.js | 18+ | ✅ Yes |
 | npm | 9+ | ✅ Yes |
-| PostgreSQL | 15+ | ❌ Optional (demo uses in-memory) |
-| Redis | 7+ | ❌ Optional (demo runs without cache) |
 | Docker | 24+ | ❌ Optional (for containerized deployment) |
 
-### Option 1: Manual Setup (Recommended for Development)
+---
+
+### 🚀 Option 1: One-Click Install (Recommended)
+
+The easiest way to get started. Works on **Windows, macOS, and Linux**.
+
+#### Windows
+
+```cmd
+:: Step 1 — Install (run once)
+install.bat
+
+:: Step 2 — Start the app
+start.bat
+```
+
+#### macOS / Linux
+
+```bash
+# Step 1 — Install (run once)
+chmod +x install.sh start.sh
+./install.sh
+
+# Step 2 — Start the app
+./start.sh
+```
+
+The app opens automatically at **http://localhost:5173**
+
+---
+
+### 🐳 Option 2: Docker (No Python/Node needed)
+
+```bash
+# Lightweight standalone (no database needed)
+docker compose -f docker-compose.standalone.yml up --build
+
+# Full stack (with PostgreSQL, Redis, Elasticsearch)
+docker compose up -d --build
+```
+
+Open **http://localhost** (Docker) or **http://localhost:5173** (dev)
+
+---
+
+### 💿 Option 3: Windows Installer (.exe / .msi)
+
+Build a proper Windows installer that creates desktop shortcuts:
+
+```cmd
+:: Build standalone .exe + Windows installer
+build_installer.bat
+```
+
+This creates:
+- `dist/LegalAI/LegalAI.exe` — Standalone app (zip & share)
+- `installer/Output/LegalAI-Setup-1.0.0.exe` — Windows installer with desktop shortcut
+
+> **Note:** Building requires [Inno Setup](https://jrsoftware.org/isdl.php) for the .exe installer. The standalone .exe works without it.
+
+---
+
+### 🔧 Option 4: Manual Setup (For Developers)
 
 #### 1. Clone the Repository
 
@@ -307,13 +367,6 @@ npm run dev
 | ReDoc | http://localhost:8000/redoc |
 | Health Check | http://localhost:8000/health |
 
-### Option 2: Docker Compose
-
-```bash
-docker-compose up -d
-```
-
-This spins up the backend, frontend, PostgreSQL, Redis, and Nginx reverse proxy.
 
 ---
 
