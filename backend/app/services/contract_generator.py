@@ -104,7 +104,18 @@ class ContractGenerator:
             if request.use_template and request.contract_type in self.templates.templates:
                 content = await self._generate_from_template(request)
             else:
-                content = await self._generate_from_llm(request)
+                # Try LLM first; fall back to template if LLM fails (e.g., rate limit)
+                try:
+                    content = await self._generate_from_llm(request)
+                except Exception as llm_err:
+                    logger.warning(
+                        "LLM generation failed, falling back to template",
+                        error=str(llm_err),
+                    )
+                    if request.contract_type in self.templates.templates:
+                        content = await self._generate_from_template(request)
+                    else:
+                        raise
 
             # Step 3: Post-process content
             content = self._post_process_content(content, request)
@@ -173,15 +184,13 @@ class ContractGenerator:
 
     def _validate_request(self, request: ContractGenerationRequest):
         """Validate the generation request."""
-        # Validate jurisdiction
-        if request.jurisdiction not in settings.SUPPORTED_JURISDICTIONS:
-            raise ContractValidationError(
-                f"Jurisdiction '{request.jurisdiction}' is not supported",
-                validation_errors=[{
-                    "field": "jurisdiction",
-                    "error": f"Must be one of: {', '.join(settings.SUPPORTED_JURISDICTIONS[:10])}...",
-                }],
+        # Validate jurisdiction — warn but don't reject unknown jurisdictions
+        if request.jurisdiction and request.jurisdiction not in settings.SUPPORTED_JURISDICTIONS:
+            logger.warning(
+                "Unknown jurisdiction, defaulting to US-Federal for compliance",
+                provided_jurisdiction=request.jurisdiction,
             )
+            # Don't reject — LLM can handle any jurisdiction
 
         # Validate parties
         if len(request.parties) < 2:
@@ -471,6 +480,14 @@ Return the improved complete contract."""
             "partnership": ["partner_1", "partner_2"],
             "merger_acquisition": ["buyer", "seller"],
             "lease": ["landlord", "tenant"],
+            "consulting": ["client", "consultant"],
+            "purchase_order": ["buyer", "seller"],
+            "loan": ["lender", "borrower"],
+            "supply": ["supplier", "buyer"],
+            "distribution": ["distributor", "manufacturer"],
+            "franchise": ["franchisor", "franchisee"],
+            "joint_venture": ["partner_1", "partner_2"],
+            "settlement": ["party_1", "party_2"],
         }
         type_prefixes = prefixes.get(contract_type, ["party_a", "party_b"])
         return type_prefixes[min(index, len(type_prefixes) - 1)]

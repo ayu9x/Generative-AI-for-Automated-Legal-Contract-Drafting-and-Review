@@ -162,10 +162,141 @@ CONTRACT_TEMPLATES: Dict[str, Dict[str, Any]] = {
             "insurance_requirements", "governing_law_state",
         ],
         "clause_structure": [
-            "premises", "term", "rent", "security_deposit",
-            "permitted_use", "maintenance_and_repairs",
-            "insurance", "indemnification", "assignment_and_subletting",
-            "default_and_remedies", "termination",
+            "definitions", "term_and_termination",
+            "confidentiality", "governing_law", "general_provisions",
+        ],
+    },
+    "consulting": {
+        "name": "Consulting Agreement",
+        "description": "Professional consulting services engagement",
+        "complexity": "standard",
+        "variables": [
+            "client_name", "client_type", "client_address",
+            "consultant_name", "consultant_type", "consultant_address",
+            "service_description", "deliverables",
+            "start_date", "end_date", "consulting_fee",
+            "payment_schedule", "governing_law_state",
+        ],
+        "clause_structure": [
+            "definitions", "confidentiality", "intellectual_property",
+            "indemnification", "limitation_of_liability",
+            "term_and_termination", "governing_law", "general_provisions",
+        ],
+    },
+    "purchase_order": {
+        "name": "Purchase Order Agreement",
+        "description": "Agreement for purchase of goods or materials",
+        "complexity": "simple",
+        "variables": [
+            "buyer_name", "buyer_type", "buyer_address",
+            "seller_name", "seller_type", "seller_address",
+            "goods_description", "quantity", "unit_price",
+            "total_price", "delivery_date", "delivery_address",
+            "payment_terms", "governing_law_state",
+        ],
+        "clause_structure": [
+            "definitions", "indemnification",
+            "limitation_of_liability", "term_and_termination",
+            "governing_law", "general_provisions",
+        ],
+    },
+    "loan": {
+        "name": "Loan Agreement",
+        "description": "Agreement for lending and borrowing of funds",
+        "complexity": "standard",
+        "variables": [
+            "lender_name", "lender_type", "lender_address",
+            "borrower_name", "borrower_type", "borrower_address",
+            "principal_amount", "interest_rate", "repayment_schedule",
+            "maturity_date", "collateral", "governing_law_state",
+        ],
+        "clause_structure": [
+            "definitions", "confidentiality",
+            "term_and_termination", "governing_law", "general_provisions",
+        ],
+    },
+    "supply": {
+        "name": "Supply Agreement",
+        "description": "Long-term supply of goods or materials",
+        "complexity": "standard",
+        "variables": [
+            "supplier_name", "supplier_type", "supplier_address",
+            "buyer_name", "buyer_type", "buyer_address",
+            "products", "minimum_order", "pricing",
+            "delivery_terms", "quality_standards",
+            "term_years", "governing_law_state",
+        ],
+        "clause_structure": [
+            "definitions", "confidentiality", "indemnification",
+            "limitation_of_liability", "force_majeure",
+            "term_and_termination", "governing_law", "general_provisions",
+        ],
+    },
+    "distribution": {
+        "name": "Distribution Agreement",
+        "description": "Agreement for distribution of products",
+        "complexity": "standard",
+        "variables": [
+            "distributor_name", "distributor_type", "distributor_address",
+            "manufacturer_name", "manufacturer_type", "manufacturer_address",
+            "territory", "products", "exclusivity",
+            "minimum_purchase", "pricing", "term_years",
+            "governing_law_state",
+        ],
+        "clause_structure": [
+            "definitions", "confidentiality", "intellectual_property",
+            "indemnification", "limitation_of_liability",
+            "term_and_termination", "governing_law", "general_provisions",
+        ],
+    },
+    "franchise": {
+        "name": "Franchise Agreement",
+        "description": "Franchise business operation agreement",
+        "complexity": "complex",
+        "variables": [
+            "franchisor_name", "franchisor_type", "franchisor_address",
+            "franchisee_name", "franchisee_type", "franchisee_address",
+            "franchise_fee", "royalty_rate", "territory",
+            "brand_name", "training_provisions", "term_years",
+            "governing_law_state",
+        ],
+        "clause_structure": [
+            "definitions", "confidentiality", "intellectual_property",
+            "indemnification", "limitation_of_liability",
+            "term_and_termination", "governing_law", "general_provisions",
+        ],
+    },
+    "joint_venture": {
+        "name": "Joint Venture Agreement",
+        "description": "Agreement for joint business venture",
+        "complexity": "complex",
+        "variables": [
+            "partner_1_name", "partner_1_type", "partner_1_address",
+            "partner_2_name", "partner_2_type", "partner_2_address",
+            "venture_purpose", "capital_contributions",
+            "profit_sharing", "management_structure",
+            "term_years", "governing_law_state",
+        ],
+        "clause_structure": [
+            "definitions", "confidentiality", "intellectual_property",
+            "indemnification", "limitation_of_liability",
+            "force_majeure", "term_and_termination",
+            "governing_law", "general_provisions",
+        ],
+    },
+    "settlement": {
+        "name": "Settlement Agreement",
+        "description": "Agreement to settle disputes or claims",
+        "complexity": "standard",
+        "variables": [
+            "party_1_name", "party_1_type", "party_1_address",
+            "party_2_name", "party_2_type", "party_2_address",
+            "dispute_description", "settlement_amount",
+            "payment_terms", "release_scope",
+            "governing_law_state",
+        ],
+        "clause_structure": [
+            "definitions", "confidentiality",
             "governing_law", "general_provisions",
         ],
     },
@@ -590,6 +721,38 @@ with its principal place of business at {party['address']} ("{party['role']}");
             "lease": [
                 ("landlord", "Landlord"),
                 ("tenant", "Tenant"),
+            ],
+            "consulting": [
+                ("client", "Client"),
+                ("consultant", "Consultant"),
+            ],
+            "purchase_order": [
+                ("buyer", "Buyer"),
+                ("seller", "Seller"),
+            ],
+            "loan": [
+                ("lender", "Lender"),
+                ("borrower", "Borrower"),
+            ],
+            "supply": [
+                ("supplier", "Supplier"),
+                ("buyer", "Buyer"),
+            ],
+            "distribution": [
+                ("distributor", "Distributor"),
+                ("manufacturer", "Manufacturer"),
+            ],
+            "franchise": [
+                ("franchisor", "Franchisor"),
+                ("franchisee", "Franchisee"),
+            ],
+            "joint_venture": [
+                ("partner_1", "Partner"),
+                ("partner_2", "Partner"),
+            ],
+            "settlement": [
+                ("party_1", "First Party"),
+                ("party_2", "Second Party"),
             ],
         }
 

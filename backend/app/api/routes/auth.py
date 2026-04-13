@@ -8,6 +8,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr, Field
 
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+
+from app.core.database import get_db
+from app.models.user import User, UserRole
+
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -34,7 +40,7 @@ class RegisterRequest(BaseModel):
     password: str = Field(..., min_length=8, max_length=128)
     full_name: str = Field(..., min_length=2, max_length=255)
     organization: Optional[str] = None
-    role: str = Field(default="CONTRACT_VIEWER")
+    role: str = Field(default="viewer")
 
 
 class LoginRequest(BaseModel):
@@ -89,47 +95,40 @@ class APIKeyResponse(BaseModel):
     created_at: str
 
 
-# ── In-Memory User Store (Replace with DB in production) ────────────
-
-_users_db: dict = {}
+# ── In-Memory API Keys Store (Replace with DB in production) ────────────
 _api_keys: dict = {}
-
-# ── Seed a demo admin user so login works out-of-the-box ────────────
-_demo_user_id = "demo-admin-001"
-_users_db[_demo_user_id] = {
-    "id": _demo_user_id,
-    "email": "admin@legalai.com",
-    "password_hash": hash_password("Admin@123456"),
-    "full_name": "Admin User",
-    "organization": "Legal AI Corp",
-    "role": "ADMIN",
-    "is_active": True,
-    "created_at": datetime.now(timezone.utc).isoformat(),
-    "last_login": None,
-}
-
-
-def _get_user_by_email(email: str) -> Optional[dict]:
-    """Find user by email."""
-    for user in _users_db.values():
-        if user["email"] == email:
-            return user
-    return None
 
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db)
 ) -> dict:
-    """Dependency to get current authenticated user."""
+    """Dependency to get current authenticated user as dictionary for backwards compatibility."""
     try:
         payload = decode_token(credentials.credentials)
         user_id = payload.get("sub")
-        if user_id not in _users_db:
+        if not user_id:
+            raise AuthenticationError("Invalid token")
+            
+        result = await db.execute(select(User).filter_by(id=UUID(user_id)))
+        user = result.scalar_one_or_none()
+        
+        if not user:
             raise AuthenticationError("User not found")
-        user = _users_db[user_id]
-        if not user.get("is_active", True):
+        if not user.is_active:
             raise AuthorizationError("Account is deactivated")
-        return user
+            
+        return {
+            "id": str(user.id),
+            "email": user.email,
+            "password_hash": user.hashed_password,
+            "full_name": user.full_name,
+            "organization": user.organization,
+            "role": user.role.value if isinstance(user.role, UserRole) else user.role,
+            "is_active": user.is_active,
+            "created_at": user.created_at.isoformat() if user.created_at else None,
+            "last_login": user.last_login.isoformat() if user.last_login else None,
+        }
     except TokenExpiredError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -159,99 +158,136 @@ def require_role(*roles: str):
 # ── Routes ───────────────────────────────────────────────────────────
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-async def register(request: RegisterRequest):
+async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db)):
     """Register a new user account."""
-    if _get_user_by_email(request.email):
+    # Check if email is taken
+    result = await db.execute(select(User).filter_by(email=request.email))
+    existing_user = result.scalar_one_or_none()
+    
+    if existing_user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Email already registered",
         )
 
-    user_id = str(uuid4())
-    now = datetime.now(timezone.utc).isoformat()
+    user_id = uuid4()
+    now = datetime.now(timezone.utc)
+    
+    # generate a unique username from email
+    base_username = request.email.split("@")[0]
+    username = f"{base_username}_{str(user_id)[:8]}"
 
-    user = {
-        "id": user_id,
-        "email": request.email,
-        "password_hash": hash_password(request.password),
-        "full_name": request.full_name,
-        "organization": request.organization,
-        "role": request.role,
-        "is_active": True,
-        "created_at": now,
-        "last_login": now,
-    }
-    _users_db[user_id] = user
+    # Map role string to enum
+    try:
+        role_enum = UserRole(request.role.lower())
+    except ValueError:
+        role_enum = UserRole.VIEWER
 
-    access_token = create_access_token({"sub": user_id, "email": request.email, "role": request.role})
-    refresh_token = create_refresh_token({"sub": user_id})
+    user = User(
+        id=user_id,
+        email=request.email,
+        username=username,
+        hashed_password=hash_password(request.password),
+        full_name=request.full_name,
+        organization=request.organization,
+        role=role_enum,
+        is_active=True,
+        created_at=now,
+        last_login=now,
+    )
+    db.add(user)
+    await db.commit()
+
+    user_id_str = str(user_id)
+    role_str = role_enum.value
+
+    access_token = create_access_token({"sub": user_id_str, "email": request.email, "role": role_str})
+    refresh_token = create_refresh_token({"sub": user_id_str})
 
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
-        user_id=user_id,
+        user_id=user_id_str,
         email=request.email,
-        role=request.role,
+        role=role_str,
     )
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(request: LoginRequest):
+async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
     """Authenticate user and return tokens."""
-    user = _get_user_by_email(request.email)
+    result = await db.execute(select(User).filter_by(email=request.email))
+    user = result.scalar_one_or_none()
+    
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
 
-    if not verify_password(request.password, user["password_hash"]):
+    if not verify_password(request.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
 
-    if not user.get("is_active", True):
+    if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is deactivated",
         )
 
-    user["last_login"] = datetime.now(timezone.utc).isoformat()
+    user.last_login = datetime.now(timezone.utc)
+    await db.commit()
+    
+    user_id_str = str(user.id)
+    role_str = user.role.value if isinstance(user.role, UserRole) else str(user.role)
 
-    access_token = create_access_token({"sub": user["id"], "email": user["email"], "role": user["role"]})
-    refresh_token = create_refresh_token({"sub": user["id"]})
+    access_token = create_access_token({"sub": user_id_str, "email": user.email, "role": role_str})
+    refresh_token = create_refresh_token({"sub": user_id_str})
 
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
-        user_id=user["id"],
-        email=user["email"],
-        role=user["role"],
+        user_id=user_id_str,
+        email=user.email,
+        role=role_str,
     )
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh_token(request: RefreshTokenRequest):
+async def refresh_token(request: RefreshTokenRequest, db: AsyncSession = Depends(get_db)):
     """Refresh access token using refresh token."""
     try:
         payload = decode_token(request.refresh_token)
         user_id = payload.get("sub")
-        if user_id not in _users_db:
+        if not user_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid refresh token",
             )
-        user = _users_db[user_id]
-        access_token = create_access_token({"sub": user["id"], "email": user["email"], "role": user["role"]})
-        new_refresh_token = create_refresh_token({"sub": user["id"]})
+            
+        result = await db.execute(select(User).filter_by(id=UUID(user_id)))
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User no longer exists",
+            )
+            
+        user_id_str = str(user.id)
+        role_str = user.role.value if isinstance(user.role, UserRole) else str(user.role)
+        
+        access_token = create_access_token({"sub": user_id_str, "email": user.email, "role": role_str})
+        new_refresh_token = create_refresh_token({"sub": user_id_str})
 
         return TokenResponse(
             access_token=access_token,
             refresh_token=new_refresh_token,
-            user_id=user["id"],
-            email=user["email"],
-            role=user["role"],
+            user_id=user_id_str,
+            email=user.email,
+            role=role_str,
         )
     except Exception as e:
         raise HTTPException(
@@ -279,12 +315,23 @@ async def get_profile(current_user: dict = Depends(get_current_user)):
 async def update_profile(
     request: UpdateProfileRequest,
     current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     """Update current user profile."""
+    result = await db.execute(select(User).filter_by(id=UUID(current_user["id"])))
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
     if request.full_name is not None:
+        user.full_name = request.full_name
         current_user["full_name"] = request.full_name
     if request.organization is not None:
+        user.organization = request.organization
         current_user["organization"] = request.organization
+
+    await db.commit()
 
     return UserProfileResponse(
         id=current_user["id"],
@@ -302,6 +349,7 @@ async def update_profile(
 async def change_password(
     request: ChangePasswordRequest,
     current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     """Change current user's password."""
     if not verify_password(request.current_password, current_user["password_hash"]):
@@ -310,7 +358,13 @@ async def change_password(
             detail="Current password is incorrect",
         )
 
-    current_user["password_hash"] = hash_password(request.new_password)
+    result = await db.execute(select(User).filter_by(id=UUID(current_user["id"])))
+    user = result.scalar_one_or_none()
+    
+    if user:
+        user.hashed_password = hash_password(request.new_password)
+        await db.commit()
+        
     return {"message": "Password changed successfully"}
 
 

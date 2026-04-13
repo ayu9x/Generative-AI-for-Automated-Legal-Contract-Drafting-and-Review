@@ -61,7 +61,7 @@ export default function Layout() {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
-      <aside className="w-64 bg-legal-dark text-white flex flex-col shrink-0">
+      <aside aria-label="Main Navigation" className="w-64 bg-legal-dark text-white flex flex-col shrink-0">
         <div className="p-6 border-b border-gray-700">
           <h1 className="text-xl font-bold flex items-center gap-2">
             <FileText className="w-6 h-6 text-primary-400" />
@@ -70,7 +70,7 @@ export default function Layout() {
           <p className="text-xs text-gray-400 mt-1">Contract Intelligence</p>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
+        <nav aria-label="Sidebar" className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
           {/* Main nav */}
           {navItems.map(({ path, label, icon: Icon }) => {
             const active = location.pathname === path;
@@ -82,8 +82,9 @@ export default function Layout() {
                   ? 'bg-primary-600 text-white'
                   : 'text-gray-300 hover:bg-gray-800 hover:text-white'
                   }`}
+                aria-current={active ? 'page' : undefined}
               >
-                <Icon className="w-5 h-5" />
+                <Icon className="w-5 h-5" aria-hidden="true" />
                 {label}
               </Link>
             );
@@ -91,9 +92,9 @@ export default function Layout() {
 
           {/* Admin section */}
           {isAdmin && (
-            <>
+            <div role="group" aria-labelledby="admin-nav-heading">
               <div className="pt-4 pb-2">
-                <p className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <p id="admin-nav-heading" className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Admin
                 </p>
               </div>
@@ -107,13 +108,14 @@ export default function Layout() {
                       ? 'bg-primary-600 text-white'
                       : 'text-gray-300 hover:bg-gray-800 hover:text-white'
                       }`}
+                    aria-current={active ? 'page' : undefined}
                   >
-                    <Icon className="w-5 h-5" />
+                    <Icon className="w-5 h-5" aria-hidden="true" />
                     {label}
                   </Link>
                 );
               })}
-            </>
+            </div>
           )}
         </nav>
 
@@ -135,15 +137,17 @@ export default function Layout() {
                 ? 'bg-primary-600 text-white'
                 : 'text-gray-300 hover:text-white hover:bg-gray-800'
                 }`}
+              aria-current={location.pathname === '/settings' ? 'page' : undefined}
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-4 h-4" aria-hidden="true" />
               Settings
             </Link>
             <button
               onClick={logout}
               className="flex items-center gap-2 px-4 py-2 w-full text-sm text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+              aria-label="Sign Out"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-4 h-4" aria-hidden="true" />
               Sign Out
             </button>
           </div>

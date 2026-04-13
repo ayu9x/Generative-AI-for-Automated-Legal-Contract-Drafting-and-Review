@@ -54,29 +54,32 @@ export default function Login() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-full mb-4">
             <FileText className="w-8 h-8 text-primary-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Legal AI Contract System</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 id="login-heading" className="text-2xl font-bold text-gray-900">Legal AI Contract System</h1>
+          <p id="login-description" className="text-gray-500 mt-1">
             {isRegister ? 'Create your account' : 'Sign in to continue'}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" aria-labelledby="login-heading" aria-describedby="login-description">
           {isRegister && (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
                 <input
+                  id="fullName"
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
+                  aria-required="true"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="John Doe"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Organization</label>
+                <label htmlFor="organization" className="block text-sm font-medium text-gray-700 mb-1">Organization</label>
                 <input
+                  id="organization"
                   type="text"
                   value={organization}
                   onChange={(e) => setOrganization(e.target.value)}
@@ -87,23 +90,27 @@ export default function Login() {
             </>
           )}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
+              id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              aria-required="true"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               placeholder="you@company.com"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
             <input
+              id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              aria-required="true"
               minLength={8}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               placeholder="••••••••"
@@ -112,6 +119,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
+            aria-busy={loading}
             className="w-full py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 disabled:opacity-50 transition-colors"
           >
             {loading ? 'Please wait...' : isRegister ? 'Create Account' : 'Sign In'}

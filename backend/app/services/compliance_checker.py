@@ -361,11 +361,17 @@ class ComplianceChecker:
             contract_type=request.contract_type,
         )
 
-        # Validate jurisdiction
+        # Validate jurisdiction — filter unsupported ones instead of failing
         all_jurisdictions = [request.jurisdiction] + request.additional_jurisdictions
-        for j in all_jurisdictions:
-            if j not in settings.SUPPORTED_JURISDICTIONS:
-                raise JurisdictionNotSupportedError(j)
+        valid_jurisdictions = [j for j in all_jurisdictions if j in settings.SUPPORTED_JURISDICTIONS]
+        unknown = [j for j in all_jurisdictions if j not in settings.SUPPORTED_JURISDICTIONS]
+        if unknown:
+            logger.warning(f"Skipping unsupported jurisdictions: {unknown}")
+        if not valid_jurisdictions:
+            # Fallback to US-Federal if no valid jurisdictions
+            valid_jurisdictions = ["US-Federal"]
+            logger.info("No supported jurisdictions provided, defaulting to US-Federal")
+        all_jurisdictions = valid_jurisdictions
 
         try:
             # Step 1: Filter applicable rules

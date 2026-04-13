@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173", "http://localhost:8000"]
 
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/legal_contracts"
+    DATABASE_URL: str = "sqlite+aiosqlite:///./data/legal_contracts.db"
     DATABASE_POOL_SIZE: int = 20
     DATABASE_MAX_OVERFLOW: int = 10
     DATABASE_ECHO: bool = False
@@ -44,10 +44,12 @@ class Settings(BaseSettings):
     # LLM Configuration
     OPENAI_API_KEY: Optional[str] = None
     ANTHROPIC_API_KEY: Optional[str] = None
-    DEFAULT_LLM_PROVIDER: str = "openai"
-    LLM_PROVIDER: str = "openai"  # Alias for DEFAULT_LLM_PROVIDER
-    DEFAULT_LLM_MODEL: str = "gpt-4"
-    LLM_MAX_TOKENS: int = 4096
+    GOOGLE_GEMINI_API_KEY: Optional[str] = None
+    GROQ_API_KEY: Optional[str] = None
+    DEFAULT_LLM_PROVIDER: str = "groq"
+    LLM_PROVIDER: str = "groq"  # Alias for DEFAULT_LLM_PROVIDER
+    DEFAULT_LLM_MODEL: str = "llama-3.3-70b-versatile"
+    LLM_MAX_TOKENS: int = 8192
     LLM_TEMPERATURE: float = 0.1
     LLM_REQUEST_TIMEOUT: int = 120
 
@@ -112,7 +114,10 @@ class Settings(BaseSettings):
     S3_REGION: Optional[str] = None
 
     class Config:
-        env_file = ".env"
+        # Look for .env in current dir first, then parent (project root)
+        import os as _os
+        _env_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "..", ".env")
+        env_file = _env_path if _os.path.isfile(_env_path) else ".env"
         case_sensitive = True
 
 

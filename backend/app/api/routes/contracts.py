@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from app.api.routes.auth import get_current_user, require_role
 from app.services.contract_generator import ContractGenerator, ContractGenerationRequest, PartyInfo
 from app.services.template_engine import TemplateEngine
+from app.services.version_control import version_control as _version_service
 from app.utils.document_processor import DocumentProcessor
 
 router = APIRouter(prefix="/contracts", tags=["Contracts"])
@@ -135,7 +136,9 @@ async def generate_contract(
             jurisdiction=request.jurisdiction,
             key_terms=request.variables,
             special_requirements=request.special_requirements,
-            use_template=request.use_ai_enhancement,
+            # When AI enhancement is ON, use LLM (use_template=False)
+            # When AI enhancement is OFF, use template only (use_template=True)
+            use_template=not request.use_ai_enhancement,
         )
 
         result = await _contract_generator.generate_contract(gen_request)
@@ -163,6 +166,17 @@ async def generate_contract(
         }
 
         _contracts_db[contract_id] = contract
+
+        # Auto-create initial version so version control / branching works
+        try:
+            _version_service.create_initial_version(
+                contract_id=contract_id,
+                content=result.content,
+                created_by=current_user["id"],
+            )
+        except Exception:
+            pass  # Don't fail contract creation if versioning has issues
+
         return ContractResponse(**contract)
 
     except Exception as e:

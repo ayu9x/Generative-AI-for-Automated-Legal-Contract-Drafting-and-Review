@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 from app.api.routes.auth import get_current_user, require_role
-from app.services.version_control import VersionControlService
+from app.services.version_control import version_control as _version_service
 
 router = APIRouter(prefix="/versions", tags=["Version Control"])
 
@@ -135,9 +135,7 @@ class RestoreRequest(BaseModel):
     reason: str
 
 
-# ── In-Memory Version Store ─────────────────────────────────────────
-
-_version_service = VersionControlService()
+# ── In-Memory Version Store (uses shared singleton from version_control.py) ──
 
 
 def _version_info_to_response(v, contract_id: str) -> VersionResponse:

@@ -70,11 +70,11 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="p-8">
+    <main className="p-8" aria-labelledby="dashboard-heading">
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 id="dashboard-heading" className="text-3xl font-bold text-gray-900">
             Welcome back, {user?.full_name?.split(' ')[0]}
           </h1>
           <p className="text-gray-500 mt-1">
@@ -91,9 +91,9 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <section aria-label="Key Statistics" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {stats.map(({ label, value, icon: Icon, color, trend }) => (
-          <div key={label} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <article key={label} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500">{label}</p>
@@ -107,20 +107,20 @@ export default function Dashboard() {
                   )}
                 </div>
               </div>
-              <div className={`${color} p-3 rounded-lg`}>
+              <div className={`${color} p-3 rounded-lg`} aria-hidden="true">
                 <Icon className="w-6 h-6 text-white" />
               </div>
             </div>
-          </div>
+          </article>
         ))}
-      </div>
+      </section>
 
       {/* Analytics Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {/* Weekly Activity Chart */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 lg:col-span-2">
+        <section aria-labelledby="weekly-activity-heading" className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 lg:col-span-2">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <h2 id="weekly-activity-heading" className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <Activity className="w-5 h-5 text-primary-600" />
               Weekly Activity
             </h2>
@@ -153,11 +153,11 @@ export default function Dashboard() {
               <span className="w-3 h-3 bg-primary-200 rounded" /> Reviews
             </span>
           </div>
-        </div>
+        </section>
 
         {/* Risk Distribution */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">Risk Distribution</h2>
+        <section aria-labelledby="risk-distribution-heading" className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 id="risk-distribution-heading" className="text-lg font-semibold text-gray-900 mb-6">Risk Distribution</h2>
           <div className="space-y-4">
             {riskDistribution.map(({ label, value, color }) => (
               <div key={label}>
@@ -185,13 +185,13 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
-        </div>
+        </section>
       </div>
 
       {/* Quick Actions & Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {/* Quick Actions */}
-        <div className="space-y-3">
+        <nav aria-label="Quick Actions" className="space-y-3">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
           <Link
             to="/generate"
@@ -231,13 +231,13 @@ export default function Dashboard() {
           >
             <Shield className="w-5 h-5 text-green-500" />
             <span className="font-medium text-gray-900">Compliance Check</span>
-            <ArrowRight className="w-4 h-4 ml-auto text-gray-400" />
+            <ArrowRight className="w-4 h-4 ml-auto text-gray-400" aria-hidden="true" />
           </Link>
-        </div>
+        </nav>
 
         {/* Recent Activity Feed */}
-        <div className="lg:col-span-2">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
+        <section aria-labelledby="recent-activity-heading" className="lg:col-span-2">
+          <h2 id="recent-activity-heading" className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
             <div className="divide-y divide-gray-50">
               {recentActivity.map((item, i) => (
@@ -254,13 +254,13 @@ export default function Dashboard() {
               ))}
             </div>
           </div>
-        </div>
+        </section>
       </div>
 
       {/* Recent Contracts */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+      <section aria-labelledby="recent-contracts-heading" className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Contracts</h2>
+          <h2 id="recent-contracts-heading" className="text-lg font-semibold text-gray-900">Recent Contracts</h2>
           <Link to="/generate" className="text-sm text-primary-600 hover:text-primary-700">
             View All
           </Link>
@@ -327,7 +327,7 @@ export default function Dashboard() {
             ))}
           </div>
         )}
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }

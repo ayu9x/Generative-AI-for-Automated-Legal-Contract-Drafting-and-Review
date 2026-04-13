@@ -45,3 +45,12 @@ logs/
 # Storage
 storage/
 uploads/
+
+# Accessibility reports
+a11y_reports/
+
+# Database files
+*.db
+
+# Alternate virtual environments
+.venv-*/

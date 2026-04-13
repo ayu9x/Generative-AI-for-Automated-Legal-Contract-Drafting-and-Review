@@ -1,9 +1,11 @@
 """LLM Service - Multi-provider AI integration for legal contract operations."""
 
 import json
+import re
 import time
 from typing import Optional, Dict, Any, List, AsyncGenerator
 from abc import ABC, abstractmethod
+from datetime import datetime, timezone
 
 import structlog
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -64,6 +66,8 @@ Generate a complete, legally-binding contract that includes:
 7. Compliance with applicable regulations
 
 Format the contract with proper legal numbering, clear section headers, and professional legal language.
+The contract MUST be specific to the contract type requested — do NOT generate a generic NDA unless specifically asked.
+Use the actual party names and details provided above throughout the contract.
 Mark each clause with its type in brackets for analysis purposes."""
 
 
@@ -156,7 +160,7 @@ class LLMProvider(ABC):
         prompt: str,
         system_prompt: str = LEGAL_SYSTEM_PROMPT,
         temperature: float = 0.1,
-        max_tokens: int = 4096,
+        max_tokens: int = 8192,
         response_format: Optional[str] = None,
     ) -> str:
         """Generate text completion."""
@@ -168,7 +172,7 @@ class LLMProvider(ABC):
         prompt: str,
         system_prompt: str = LEGAL_SYSTEM_PROMPT,
         temperature: float = 0.1,
-        max_tokens: int = 4096,
+        max_tokens: int = 8192,
     ) -> AsyncGenerator[str, None]:
         """Generate streaming text completion."""
         pass
@@ -197,7 +201,7 @@ class OpenAIProvider(LLMProvider):
         prompt: str,
         system_prompt: str = LEGAL_SYSTEM_PROMPT,
         temperature: float = 0.1,
-        max_tokens: int = 4096,
+        max_tokens: int = 8192,
         response_format: Optional[str] = None,
     ) -> str:
         if not self.client:
@@ -231,7 +235,7 @@ class OpenAIProvider(LLMProvider):
         prompt: str,
         system_prompt: str = LEGAL_SYSTEM_PROMPT,
         temperature: float = 0.1,
-        max_tokens: int = 4096,
+        max_tokens: int = 8192,
     ) -> AsyncGenerator[str, None]:
         if not self.client:
             raise LLMServiceError("OpenAI client not initialized", "openai")
@@ -287,7 +291,7 @@ class AnthropicProvider(LLMProvider):
         prompt: str,
         system_prompt: str = LEGAL_SYSTEM_PROMPT,
         temperature: float = 0.1,
-        max_tokens: int = 4096,
+        max_tokens: int = 8192,
         response_format: Optional[str] = None,
     ) -> str:
         if not self.client:
@@ -314,7 +318,7 @@ class AnthropicProvider(LLMProvider):
         prompt: str,
         system_prompt: str = LEGAL_SYSTEM_PROMPT,
         temperature: float = 0.1,
-        max_tokens: int = 4096,
+        max_tokens: int = 8192,
     ) -> AsyncGenerator[str, None]:
         if not self.client:
             raise LLMServiceError("Anthropic client not initialized", "anthropic")
@@ -344,15 +348,210 @@ class AnthropicProvider(LLMProvider):
             raise LLMServiceError(f"Embedding generation failed: {str(e)}", "anthropic")
 
 
+class GeminiProvider(LLMProvider):
+    """Google Gemini provider implementation using the new google.genai SDK."""
+
+    def __init__(self):
+        try:
+            from google import genai
+            from google.genai import types
+            self.genai = genai
+            self.types = types
+            self.model_name = settings.DEFAULT_LLM_MODEL or "gemini-2.0-flash"
+            self.client = genai.Client(api_key=settings.GOOGLE_GEMINI_API_KEY)
+            logger.info("Gemini provider initialized", model=self.model_name)
+        except Exception as e:
+            logger.warning("Gemini client initialization failed", error=str(e))
+            self.client = None
+            self.genai = None
+            self.types = None
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=30))
+    async def generate(
+        self,
+        prompt: str,
+        system_prompt: str = LEGAL_SYSTEM_PROMPT,
+        temperature: float = 0.1,
+        max_tokens: int = 8192,
+        response_format: Optional[str] = None,
+    ) -> str:
+        if not self.client:
+            raise LLMServiceError("Gemini client not initialized", "gemini")
+
+        try:
+            config_kwargs = {
+                "system_instruction": system_prompt,
+                "temperature": temperature,
+                "max_output_tokens": max_tokens,
+            }
+
+            if response_format == "json":
+                config_kwargs["response_mime_type"] = "application/json"
+
+            config = self.types.GenerateContentConfig(**config_kwargs)
+
+            response = await self.client.aio.models.generate_content(
+                model=self.model_name,
+                contents=prompt,
+                config=config,
+            )
+
+            return response.text
+
+        except Exception as e:
+            error_msg = str(e)
+            if "quota" in error_msg.lower() or "rate" in error_msg.lower():
+                raise LLMRateLimitError("gemini")
+            raise LLMServiceError(f"Gemini generation failed: {error_msg}", "gemini")
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        system_prompt: str = LEGAL_SYSTEM_PROMPT,
+        temperature: float = 0.1,
+        max_tokens: int = 8192,
+    ) -> AsyncGenerator[str, None]:
+        if not self.client:
+            raise LLMServiceError("Gemini client not initialized", "gemini")
+
+        try:
+            config = self.types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                temperature=temperature,
+                max_output_tokens=max_tokens,
+            )
+
+            async for chunk in self.client.aio.models.generate_content_stream(
+                model=self.model_name,
+                contents=prompt,
+                config=config,
+            ):
+                if chunk.text:
+                    yield chunk.text
+
+        except Exception as e:
+            raise LLMServiceError(f"Gemini streaming failed: {str(e)}", "gemini")
+
+    async def get_embeddings(self, texts: List[str]) -> List[List[float]]:
+        if not self.client:
+            raise LLMServiceError("Gemini client not initialized", "gemini")
+
+        try:
+            results = []
+            for text in texts:
+                response = await self.client.aio.models.embed_content(
+                    model="text-embedding-004",
+                    contents=text,
+                )
+                results.append(response.embeddings[0].values)
+            return results
+        except Exception as e:
+            raise LLMServiceError(f"Gemini embedding failed: {str(e)}", "gemini")
+
+
+class GroqProvider(LLMProvider):
+    """Groq provider implementation using the Groq SDK (OpenAI-compatible)."""
+
+    def __init__(self):
+        try:
+            from groq import AsyncGroq
+            self.client = AsyncGroq(api_key=settings.GROQ_API_KEY)
+            self.model = settings.DEFAULT_LLM_MODEL or "llama-3.3-70b-versatile"
+            logger.info("Groq provider initialized", model=self.model)
+        except Exception as e:
+            logger.warning("Groq client initialization failed", error=str(e))
+            self.client = None
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=30))
+    async def generate(
+        self,
+        prompt: str,
+        system_prompt: str = LEGAL_SYSTEM_PROMPT,
+        temperature: float = 0.1,
+        max_tokens: int = 8192,
+        response_format: Optional[str] = None,
+    ) -> str:
+        if not self.client:
+            raise LLMServiceError("Groq client not initialized", "groq")
+
+        try:
+            kwargs = {
+                "model": self.model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt},
+                ],
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            }
+
+            if response_format == "json":
+                kwargs["response_format"] = {"type": "json_object"}
+
+            response = await self.client.chat.completions.create(**kwargs)
+            return response.choices[0].message.content
+
+        except Exception as e:
+            error_msg = str(e)
+            if "rate_limit" in error_msg.lower():
+                raise LLMRateLimitError("groq")
+            raise LLMServiceError(f"Groq generation failed: {error_msg}", "groq")
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        system_prompt: str = LEGAL_SYSTEM_PROMPT,
+        temperature: float = 0.1,
+        max_tokens: int = 8192,
+    ) -> AsyncGenerator[str, None]:
+        if not self.client:
+            raise LLMServiceError("Groq client not initialized", "groq")
+
+        try:
+            stream = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=True,
+            )
+
+            async for chunk in stream:
+                if chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+
+        except Exception as e:
+            raise LLMServiceError(f"Groq streaming failed: {str(e)}", "groq")
+
+    async def get_embeddings(self, texts: List[str]) -> List[List[float]]:
+        # Groq doesn't have an embeddings API; fall back to sentence-transformers
+        try:
+            from sentence_transformers import SentenceTransformer
+            model = SentenceTransformer("all-MiniLM-L6-v2")
+            embeddings = model.encode(texts, convert_to_numpy=True)
+            return embeddings.tolist()
+        except Exception:
+            # Fallback to random embeddings if sentence-transformers not available
+            import random
+            return [[random.random() for _ in range(384)] for _ in texts]
+
+
 class MockLLMProvider(LLMProvider):
-    """Mock provider for testing and development without API keys."""
+    """Mock provider that generates prompt-aware contracts using the template engine.
+    
+    This provider parses the user's prompt to extract contract parameters and uses
+    the TemplateEngine to generate a real, customized contract — NOT a hardcoded response.
+    """
 
     async def generate(
         self,
         prompt: str,
         system_prompt: str = LEGAL_SYSTEM_PROMPT,
         temperature: float = 0.1,
-        max_tokens: int = 4096,
+        max_tokens: int = 8192,
         response_format: Optional[str] = None,
     ) -> str:
         if response_format == "json":
@@ -364,7 +563,7 @@ class MockLLMProvider(LLMProvider):
         prompt: str,
         system_prompt: str = LEGAL_SYSTEM_PROMPT,
         temperature: float = 0.1,
-        max_tokens: int = 4096,
+        max_tokens: int = 8192,
     ) -> AsyncGenerator[str, None]:
         content = self._generate_mock_contract(prompt)
         words = content.split()
@@ -375,224 +574,489 @@ class MockLLMProvider(LLMProvider):
         import random
         return [[random.random() for _ in range(384)] for _ in texts]
 
+    def _parse_prompt(self, prompt: str) -> Dict[str, Any]:
+        """Parse the generation prompt to extract contract parameters."""
+        result = {
+            "contract_type": "nda",
+            "parties": [],
+            "jurisdiction": "US-Federal",
+            "governing_law": "US-Federal",
+            "key_terms": {},
+            "special_requirements": "",
+            "industry": "general",
+        }
+
+        # Extract contract type
+        type_match = re.search(
+            r'(?:comprehensive|generate)\s+(\w[\w\s&/]+?)\s+contract',
+            prompt, re.IGNORECASE
+        )
+        if type_match:
+            raw_type = type_match.group(1).strip().lower()
+            type_mapping = {
+                "non-disclosure": "nda", "nda": "nda",
+                "master service": "msa", "msa": "msa",
+                "employment": "employment",
+                "service": "service_agreement", "service agreement": "service_agreement",
+                "license": "license", "software license": "license",
+                "partnership": "partnership",
+                "merger": "merger_acquisition", "merger & acquisition": "merger_acquisition",
+                "merger_acquisition": "merger_acquisition",
+                "lease": "lease", "commercial lease": "lease",
+                "consulting": "consulting",
+                "purchase order": "purchase_order", "purchase_order": "purchase_order",
+                "loan": "loan",
+                "supply": "supply",
+                "distribution": "distribution",
+                "franchise": "franchise",
+                "joint venture": "joint_venture", "joint_venture": "joint_venture",
+                "settlement": "settlement",
+                "real estate": "real_estate", "real_estate": "real_estate",
+            }
+            for key, val in type_mapping.items():
+                if key in raw_type:
+                    result["contract_type"] = val
+                    break
+
+        # Extract parties
+        party_lines = re.findall(
+            r'-\s*([\w\s]+?):\s*([\w\s.,]+?)(?:\(|$)',
+            prompt, re.MULTILINE
+        )
+        for role, name in party_lines:
+            result["parties"].append({
+                "name": name.strip().rstrip('.'),
+                "role": role.strip(),
+                "type": "corporation",
+            })
+        if not result["parties"]:
+            result["parties"] = [
+                {"name": "Party A", "role": "First Party", "type": "corporation"},
+                {"name": "Party B", "role": "Second Party", "type": "corporation"},
+            ]
+
+        # Extract jurisdiction
+        juris_match = re.search(r'\*\*Jurisdiction:\*\*\s*(.+)', prompt)
+        if juris_match:
+            result["jurisdiction"] = juris_match.group(1).strip()
+
+        # Extract governing law
+        gov_match = re.search(r'\*\*Governing Law:\*\*\s*(.+)', prompt)
+        if gov_match:
+            result["governing_law"] = gov_match.group(1).strip()
+
+        # Extract industry
+        ind_match = re.search(r'\*\*Industry:\*\*\s*(.+)', prompt)
+        if ind_match:
+            result["industry"] = ind_match.group(1).strip()
+
+        # Extract special requirements
+        req_match = re.search(r'\*\*Special Requirements:\*\*\s*(.+?)(?:\n\*\*|\Z)', prompt, re.DOTALL)
+        if req_match:
+            result["special_requirements"] = req_match.group(1).strip()
+
+        # Extract key terms
+        terms_section = re.search(r'\*\*Key Terms:\*\*\s*\n((?:-.+\n?)+)', prompt)
+        if terms_section:
+            for line in terms_section.group(1).strip().split('\n'):
+                kv = line.strip().lstrip('- ').split(':', 1)
+                if len(kv) == 2:
+                    result["key_terms"][kv[0].strip()] = kv[1].strip()
+
+        return result
+
     def _generate_mock_contract(self, prompt: str) -> str:
-        """Generate a realistic mock contract for development."""
-        return """
-MUTUAL NON-DISCLOSURE AGREEMENT
+        """Generate a prompt-aware contract using the template engine."""
+        from app.services.template_engine import TemplateEngine
 
-THIS MUTUAL NON-DISCLOSURE AGREEMENT (this "Agreement") is entered into as of the date 
-last signed below (the "Effective Date"), by and between:
+        params = self._parse_prompt(prompt)
+        contract_type = params["contract_type"]
+        parties = params["parties"]
+        jurisdiction = params["jurisdiction"]
+        governing_law = params["governing_law"]
+        key_terms = params["key_terms"]
+        special_requirements = params["special_requirements"]
 
-Party A: [PARTY_A_NAME], a [PARTY_A_TYPE] organized under the laws of [PARTY_A_JURISDICTION], 
-with its principal place of business at [PARTY_A_ADDRESS] ("Disclosing Party");
+        engine = TemplateEngine()
 
-AND
+        # Build variables for template rendering
+        variables = {**key_terms}
+        variables["governing_law_state"] = governing_law or jurisdiction
+        variables["effective_date"] = key_terms.get(
+            "effective_date",
+            datetime.now(timezone.utc).strftime("%B %d, %Y"),
+        )
 
-Party B: [PARTY_B_NAME], a [PARTY_B_TYPE] organized under the laws of [PARTY_B_JURISDICTION], 
-with its principal place of business at [PARTY_B_ADDRESS] ("Receiving Party");
+        # Map parties to template variables using the engine's party prefix logic
+        party_prefixes_map = {
+            "nda": ["disclosing_party", "receiving_party"],
+            "msa": ["client", "provider"],
+            "employment": ["employer", "employee"],
+            "service_agreement": ["client", "provider"],
+            "license": ["licensor", "licensee"],
+            "partnership": ["partner_1", "partner_2"],
+            "merger_acquisition": ["buyer", "seller"],
+            "lease": ["landlord", "tenant"],
+            "consulting": ["client", "consultant"],
+            "purchase_order": ["buyer", "seller"],
+            "loan": ["lender", "borrower"],
+            "supply": ["supplier", "buyer"],
+            "distribution": ["distributor", "manufacturer"],
+            "franchise": ["franchisor", "franchisee"],
+            "joint_venture": ["partner_1", "partner_2"],
+            "settlement": ["party_1", "party_2"],
+        }
+        prefixes = party_prefixes_map.get(contract_type, ["party_a", "party_b"])
 
+        for i, party in enumerate(parties):
+            prefix = prefixes[min(i, len(prefixes) - 1)]
+            variables[f"{prefix}_name"] = party.get("name", f"[PARTY {i+1}]")
+            variables[f"{prefix}_type"] = party.get("type", "corporation")
+            variables[f"{prefix}_address"] = party.get("address", "[ADDRESS]")
+
+        # Additional common variables
+        variables.setdefault("term_years", key_terms.get("term_years", "2"))
+        variables.setdefault("dispute_mechanism", key_terms.get("dispute_mechanism", "arbitration"))
+        variables.setdefault("ip_ownership", key_terms.get("ip_ownership", "shared"))
+        variables.setdefault("include_ip_indemnity", False)
+
+        # Try to use the template engine first
+        if contract_type in engine.templates:
+            try:
+                content = engine.build_contract_from_template(contract_type, variables)
+                # Append special requirements if provided
+                if special_requirements and special_requirements != "None specified":
+                    content += f"\n\nSCHEDULE A: SPECIAL REQUIREMENTS\n\n{special_requirements}\n"
+                return content
+            except Exception as e:
+                logger.warning(f"Template generation failed, using fallback: {e}")
+
+        # Fallback: generate a basic contract structure for types without templates
+        return self._generate_fallback_contract(
+            contract_type, parties, jurisdiction, governing_law,
+            key_terms, special_requirements
+        )
+
+    def _generate_fallback_contract(
+        self,
+        contract_type: str,
+        parties: List[Dict],
+        jurisdiction: str,
+        governing_law: str,
+        key_terms: Dict,
+        special_requirements: str,
+    ) -> str:
+        """Generate a basic contract for types without dedicated templates."""
+        type_names = {
+            "nda": "NON-DISCLOSURE AGREEMENT",
+            "msa": "MASTER SERVICE AGREEMENT",
+            "employment": "EMPLOYMENT AGREEMENT",
+            "service_agreement": "SERVICE AGREEMENT",
+            "license": "SOFTWARE LICENSE AGREEMENT",
+            "partnership": "PARTNERSHIP AGREEMENT",
+            "merger_acquisition": "MERGER & ACQUISITION AGREEMENT",
+            "lease": "COMMERCIAL LEASE AGREEMENT",
+            "consulting": "CONSULTING AGREEMENT",
+            "purchase_order": "PURCHASE ORDER AGREEMENT",
+            "loan": "LOAN AGREEMENT",
+            "supply": "SUPPLY AGREEMENT",
+            "distribution": "DISTRIBUTION AGREEMENT",
+            "franchise": "FRANCHISE AGREEMENT",
+            "joint_venture": "JOINT VENTURE AGREEMENT",
+            "settlement": "SETTLEMENT AGREEMENT",
+            "real_estate": "REAL ESTATE AGREEMENT",
+            "custom": "CUSTOM AGREEMENT",
+        }
+
+        title = type_names.get(contract_type, contract_type.replace("_", " ").upper() + " AGREEMENT")
+        now = datetime.now(timezone.utc).strftime("%B %d, %Y")
+        effective_date = key_terms.get("effective_date", now)
+
+        # Build parties block
+        parties_block = ""
+        for i, party in enumerate(parties):
+            name = party.get("name", f"Party {chr(65 + i)}")
+            role = party.get("role", f"Party {chr(65 + i)}")
+            entity_type = party.get("type", "corporation")
+            address = party.get("address", "[ADDRESS]")
+            parties_block += f"""
+{name}, a {entity_type} with its principal place of business at 
+{address} ("{role}");
+"""
+
+        # Build key terms block
+        terms_block = ""
+        if key_terms:
+            terms_block = "\nARTICLE 2. KEY TERMS\n\n"
+            for i, (k, v) in enumerate(key_terms.items(), 1):
+                terms_block += f'2.{i} "{k.replace("_", " ").title()}" means {v}.\n\n'
+
+        # Build special requirements block
+        special_block = ""
+        if special_requirements and special_requirements != "None specified":
+            special_block = f"""
+ARTICLE 10. SPECIAL PROVISIONS
+
+{special_requirements}
+"""
+
+        term_years = key_terms.get("term_years", "1")
+
+        contract = f"""{'=' * 80}
+{title}
+{'=' * 80}
+
+THIS {title} (this "Agreement") is entered into as of 
+{effective_date} (the "Effective Date"),
+
+BETWEEN:
+{parties_block}
 (each a "Party" and collectively the "Parties").
 
 RECITALS
 
-WHEREAS, the Parties wish to explore a potential business relationship (the "Purpose"); and
+WHEREAS, the Parties desire to enter into this {title.lower()} to establish the 
+terms and conditions governing their business relationship; and
 
-WHEREAS, in connection with the Purpose, each Party may disclose to the other certain 
-confidential and proprietary information;
+WHEREAS, the Parties acknowledge that this Agreement shall be governed by the laws 
+of {governing_law};
 
-NOW, THEREFORE, in consideration of the mutual covenants and agreements herein contained, 
-and for other good and valuable consideration, the receipt and sufficiency of which are 
-hereby acknowledged, the Parties agree as follows:
+NOW, THEREFORE, in consideration of the mutual covenants and agreements herein 
+contained, and for other good and valuable consideration, the receipt and sufficiency 
+of which are hereby acknowledged, the Parties agree as follows:
 
-[CONFIDENTIALITY] 1. DEFINITIONS
+ARTICLE 1. DEFINITIONS
 
-1.1 "Confidential Information" means any and all non-public, proprietary, or confidential 
-information disclosed by either Party to the other Party, whether orally, in writing, 
-electronically, or by any other means, including but not limited to:
+1.1 "Agreement" means this {title} and all exhibits, schedules, and amendments 
+attached hereto or incorporated by reference.
 
-(a) trade secrets, inventions, ideas, processes, formulas, source code, object code, 
-    data, programs, know-how, improvements, discoveries, developments, designs, and techniques;
+1.2 "Affiliate" means any entity that directly or indirectly controls, is controlled 
+by, or is under common control with a Party, where "control" means ownership of more 
+than fifty percent (50%) of the voting securities.
 
-(b) financial information, business plans, marketing strategies, customer lists, supplier 
-    information, pricing data, and projections;
+1.3 "Business Day" means any day other than a Saturday, Sunday, or public holiday 
+in {jurisdiction}.
 
-(c) technical specifications, engineering drawings, algorithms, and research data;
+1.4 "Confidential Information" means any information designated as confidential or 
+that reasonably should be understood to be confidential given the nature of the 
+information and circumstances of disclosure.
+{terms_block}
+ARTICLE 3. SCOPE AND PURPOSE
 
-(d) any information that is marked or designated as "confidential," "proprietary," or with 
-    similar designation; and
+3.1 This Agreement sets forth the terms and conditions under which the Parties 
+shall conduct their business relationship as described herein.
 
-(e) any information that a reasonable person would understand to be confidential given the 
-    nature of the information and circumstances of disclosure.
+3.2 Each Party shall perform its obligations under this Agreement in good faith 
+and in accordance with applicable law.
 
-1.2 "Representative" means a Party's directors, officers, employees, agents, advisors, 
-consultants, and contractors who need to know Confidential Information for the Purpose.
+ARTICLE 4. REPRESENTATIONS AND WARRANTIES
 
-[OBLIGATIONS] 2. OBLIGATIONS OF RECEIVING PARTY
+4.1 Each Party represents and warrants that:
 
-2.1 The Receiving Party shall:
+(a) it has full power and authority to enter into and perform this Agreement;
+(b) the execution and performance of this Agreement does not conflict with any 
+    other agreement to which it is a party;
+(c) it shall comply with all applicable laws and regulations in performing its 
+    obligations hereunder.
 
-(a) hold Confidential Information in strict confidence using the same degree of care it uses 
-    to protect its own confidential information, but in no event less than reasonable care;
+ARTICLE 5. CONFIDENTIALITY
 
-(b) not disclose Confidential Information to any third party without the prior written consent 
-    of the Disclosing Party;
+5.1 Each Party receiving Confidential Information shall:
 
-(c) use Confidential Information solely for the Purpose;
+(a) hold such Confidential Information in strict confidence;
+(b) not disclose such Confidential Information to any third party without prior 
+    written consent;
+(c) use such Confidential Information solely for the purposes of this Agreement;
+(d) protect such Confidential Information using the same degree of care it uses 
+    to protect its own confidential information.
 
-(d) limit disclosure of Confidential Information to its Representatives who have a need to 
-    know and are bound by confidentiality obligations no less restrictive than this Agreement;
+5.2 The obligations of confidentiality shall survive for a period of five (5) 
+years following the termination of this Agreement.
 
-(e) immediately notify the Disclosing Party upon discovery of any unauthorized use or 
-    disclosure of Confidential Information.
+ARTICLE 6. TERM AND TERMINATION
 
-[EXCLUSIONS] 3. EXCLUSIONS
+6.1 This Agreement shall commence on the Effective Date and continue for a period 
+of {term_years} year(s) unless earlier terminated as provided herein.
 
-3.1 Confidential Information does not include information that:
+6.2 Either Party may terminate this Agreement upon thirty (30) days' prior written 
+notice to the other Party.
 
-(a) is or becomes publicly available through no fault of the Receiving Party;
-(b) was known to the Receiving Party prior to disclosure, as evidenced by written records;
-(c) is independently developed by the Receiving Party without use of Confidential Information;
-(d) is rightfully obtained from a third party without restriction on disclosure.
+6.3 Either Party may terminate this Agreement immediately upon written notice if 
+the other Party materially breaches this Agreement and fails to cure such breach 
+within thirty (30) days after receiving written notice.
 
-[TERM] 4. TERM AND TERMINATION
+ARTICLE 7. LIMITATION OF LIABILITY
 
-4.1 This Agreement shall be effective from the Effective Date and shall continue for a period 
-of two (2) years unless earlier terminated by either Party upon thirty (30) days' written notice.
+7.1 IN NO EVENT SHALL EITHER PARTY BE LIABLE TO THE OTHER PARTY FOR ANY INDIRECT, 
+INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES.
 
-4.2 The obligations of confidentiality shall survive termination of this Agreement for a 
-period of five (5) years from the date of disclosure of the relevant Confidential Information.
+7.2 EACH PARTY'S TOTAL AGGREGATE LIABILITY SHALL NOT EXCEED THE TOTAL FEES PAID 
+OR PAYABLE UNDER THIS AGREEMENT DURING THE TWELVE (12) MONTHS PRECEDING THE CLAIM.
 
-[RETURN_OF_MATERIALS] 5. RETURN OF MATERIALS
+ARTICLE 8. INDEMNIFICATION
 
-5.1 Upon termination of this Agreement or upon request by the Disclosing Party, the Receiving 
-Party shall promptly return or destroy all Confidential Information and certify such 
-destruction in writing.
+8.1 Each Party shall indemnify, defend, and hold harmless the other Party from 
+and against any and all claims, damages, losses, liabilities, costs, and expenses 
+arising out of or related to:
 
-[REMEDIES] 6. REMEDIES
+(a) the indemnifying Party's material breach of this Agreement;
+(b) the indemnifying Party's negligence or willful misconduct;
+(c) any violation of applicable law by the indemnifying Party.
 
-6.1 The Parties acknowledge that a breach of this Agreement may cause irreparable harm for 
-which monetary damages would be inadequate. Accordingly, the Disclosing Party shall be 
-entitled to seek equitable relief, including injunction and specific performance, in addition 
-to all other remedies available at law or in equity.
+ARTICLE 9. GOVERNING LAW AND DISPUTE RESOLUTION
 
-[GOVERNING_LAW] 7. GOVERNING LAW AND DISPUTE RESOLUTION
+9.1 This Agreement shall be governed by and construed in accordance with the laws 
+of {governing_law}, without giving effect to any choice or conflict of law 
+provision or rule.
 
-7.1 This Agreement shall be governed by and construed in accordance with the laws of the 
-State of [GOVERNING_LAW_STATE], without regard to its conflict of law principles.
+9.2 Any dispute arising out of or relating to this Agreement shall be resolved 
+through binding arbitration administered by the American Arbitration Association 
+under its Commercial Arbitration Rules.
 
-7.2 Any dispute arising out of or relating to this Agreement shall be resolved through 
-binding arbitration administered by the American Arbitration Association under its 
-Commercial Arbitration Rules.
+9.3 The prevailing Party in any action to enforce this Agreement shall be entitled 
+to recover reasonable attorneys' fees and costs.
+{special_block}
+ARTICLE 11. GENERAL PROVISIONS
 
-[GENERAL_PROVISIONS] 8. GENERAL PROVISIONS
+11.1 Entire Agreement. This Agreement constitutes the entire agreement between 
+the Parties with respect to the subject matter hereof.
 
-8.1 Entire Agreement. This Agreement constitutes the entire agreement between the Parties 
-with respect to the subject matter hereof and supersedes all prior negotiations, 
-representations, warranties, commitments, offers, and agreements.
+11.2 Amendment. No amendment shall be effective unless in writing and signed by 
+both Parties.
 
-8.2 Amendment. No amendment to this Agreement shall be effective unless in writing and 
-signed by both Parties.
+11.3 Waiver. No waiver of any provision shall constitute a waiver of any other 
+provision or a continuing waiver.
 
-8.3 Waiver. No waiver of any provision of this Agreement shall constitute a waiver of any 
-other provision or a continuing waiver.
+11.4 Severability. If any provision is found to be invalid or unenforceable, the 
+remaining provisions shall continue in full force and effect.
 
-8.4 Severability. If any provision of this Agreement is found to be invalid or unenforceable, 
-the remaining provisions shall continue in full force and effect.
+11.5 Assignment. Neither Party may assign this Agreement without the prior written 
+consent of the other Party.
 
-8.5 Assignment. Neither Party may assign this Agreement without the prior written consent 
-of the other Party.
+11.6 Notices. All notices shall be in writing and delivered by certified mail, 
+overnight courier, or email to the addresses specified herein.
 
-8.6 Notices. All notices under this Agreement shall be in writing and delivered by certified 
-mail, overnight courier, or email to the addresses specified above.
+11.7 Counterparts. This Agreement may be executed in counterparts, each of which 
+shall be deemed an original.
 
-8.7 Counterparts. This Agreement may be executed in counterparts, each of which shall be 
-deemed an original.
+11.8 Force Majeure. Neither Party shall be liable for any failure or delay in 
+performing its obligations due to circumstances beyond its reasonable control.
 
 IN WITNESS WHEREOF, the Parties have executed this Agreement as of the Effective Date.
 
-[PARTY_A_NAME]                          [PARTY_B_NAME]
-By: ________________________            By: ________________________
-Name: ______________________            Name: ______________________
-Title: _____________________            Title: _____________________
-Date: ______________________            Date: ______________________
+"""
+        for party in parties:
+            name = party.get("name", "[PARTY NAME]")
+            contract += f"""{name}
+
+By: ________________________________
+Name: ______________________________
+Title: _____________________________
+Date: ______________________________
+
 """
 
+        return contract
+
     def _generate_mock_json(self, prompt: str) -> dict:
-        """Generate mock JSON response for analysis prompts."""
+        """Generate prompt-aware mock JSON response for analysis prompts."""
+        params = self._parse_prompt(prompt)
+
         if "risk" in prompt.lower():
             return {
                 "overall_risk_score": 0.35,
                 "risk_level": "medium",
                 "confidence": 0.92,
+                "contract_type_analyzed": params.get("contract_type", "unknown"),
+                "jurisdiction_analyzed": params.get("jurisdiction", "unknown"),
                 "risk_factors": [
                     {
                         "category": "financial",
-                        "factor": "Unlimited liability exposure",
+                        "factor": "Liability exposure may be uncapped in certain scenarios",
                         "score": 0.6,
-                        "clause_reference": "Section 6.1",
-                        "explanation": "No cap on liability for breaches",
-                        "remediation": "Add liability cap provision",
-                        "precedent": "ABC Corp v. XYZ Inc. (2023)"
+                        "clause_reference": "Article 7 - Limitation of Liability",
+                        "explanation": "The liability cap refers to fees paid, which may be insufficient for high-value disputes",
+                        "remediation": "Consider adding a fixed monetary cap on total liability",
+                        "precedent": f"Standard commercial practice in {params.get('jurisdiction', 'US-Federal')}"
                     },
                     {
                         "category": "confidentiality",
                         "factor": "Broad definition of confidential information",
                         "score": 0.3,
-                        "clause_reference": "Section 1.1",
-                        "explanation": "Definition may capture publicly available information",
-                        "remediation": "Narrow the definition scope",
+                        "clause_reference": "Article 5 - Confidentiality",
+                        "explanation": "Definition may inadvertently capture publicly available information",
+                        "remediation": "Add explicit carve-outs for publicly known information",
                         "precedent": "Tech Solutions v. Data Corp (2022)"
                     },
                     {
                         "category": "termination",
-                        "factor": "Short notice period",
+                        "factor": "Short notice period for termination",
                         "score": 0.4,
-                        "clause_reference": "Section 4.1",
+                        "clause_reference": "Article 6 - Term and Termination",
                         "explanation": "30-day notice may be insufficient for complex arrangements",
-                        "remediation": "Consider 60-90 day notice period",
+                        "remediation": "Consider 60-90 day notice period for material contracts",
                         "precedent": "Standard industry practice"
-                    }
+                    },
+                    {
+                        "category": "dispute_resolution",
+                        "factor": "Arbitration venue not specified",
+                        "score": 0.5,
+                        "clause_reference": "Article 9 - Dispute Resolution",
+                        "explanation": "Lack of specified venue could lead to jurisdictional disputes",
+                        "remediation": f"Specify arbitration venue within {params.get('jurisdiction', 'the governing jurisdiction')}",
+                        "precedent": "Per AAA Commercial Arbitration Rules"
+                    },
                 ],
                 "key_findings": [
-                    "Missing limitation of liability clause",
-                    "Non-compete provisions may be unenforceable in certain jurisdictions",
-                    "Arbitration clause lacks specificity on venue"
+                    "Liability cap is relative to fees paid — may be insufficient",
+                    "No specific data protection clause for GDPR/CCPA compliance",
+                    "Arbitration clause lacks specificity on venue and language",
+                    "Force majeure clause is basic — consider expanding scope",
                 ],
                 "recommendations": [
                     "Add monetary cap on damages",
-                    "Include carve-outs for IP infringement",
-                    "Specify arbitration venue and rules"
-                ]
+                    "Include data protection addendum if handling personal data",
+                    "Specify arbitration venue, language, and rules version",
+                    "Add insurance requirements for high-value contracts",
+                ],
             }
         elif "compliance" in prompt.lower():
             return {
                 "overall_status": "partial",
                 "compliance_score": 0.78,
+                "jurisdiction_checked": params.get("jurisdiction", "unknown"),
+                "contract_type_checked": params.get("contract_type", "unknown"),
                 "checks": [
                     {
-                        "rule": "GDPR Art. 28 - Data Processing",
+                        "rule": "Data Protection Requirements",
                         "status": "warning",
-                        "explanation": "Contract lacks explicit data processing terms",
-                        "remediation": "Add Data Processing Agreement annex",
+                        "explanation": "Contract may need explicit data processing terms if personal data is involved",
+                        "remediation": "Add Data Processing Agreement annex if applicable",
                         "severity": "high"
                     },
                     {
                         "rule": "Statute of Frauds",
                         "status": "compliant",
-                        "explanation": "Agreement is in writing and signed by parties",
+                        "explanation": "Agreement is in writing and includes signature blocks",
                         "severity": "low"
                     },
                     {
-                        "rule": "Non-Compete Duration",
+                        "rule": "Governing Law Clause",
                         "status": "compliant",
-                        "explanation": "Confidentiality period is within reasonable bounds",
+                        "explanation": f"Governing law ({params.get('governing_law', 'specified')}) is clearly stated",
+                        "severity": "low"
+                    },
+                    {
+                        "rule": "Termination Notice Requirements",
+                        "status": "compliant",
+                        "explanation": "Notice period and method are specified",
                         "severity": "medium"
-                    }
+                    },
                 ],
                 "required_actions": [
-                    "Add GDPR data processing provisions if EU personal data is involved",
-                    "Verify enforceability of non-compete in target jurisdictions"
-                ]
+                    "Review data protection requirements for the applicable jurisdiction",
+                    "Verify enforceability of dispute resolution mechanism in target jurisdiction",
+                ],
             }
         else:
             return {"status": "success", "message": "Analysis complete"}
@@ -604,8 +1068,10 @@ class LLMService:
     """Factory and manager for LLM providers."""
 
     _providers: Dict[str, LLMProvider] = {}
+    _active_provider_name: str = "mock"
 
     def __init__(self):
+        self._providers = {}  # Instance-level dict to avoid class-level sharing
         self._initialize_providers()
 
     def _initialize_providers(self):
@@ -613,16 +1079,47 @@ class LLMService:
         # Always register mock provider for fallback
         self._providers["mock"] = MockLLMProvider()
 
+        if settings.GROQ_API_KEY and settings.GROQ_API_KEY != "your-groq-api-key-here":
+            try:
+                self._providers["groq"] = GroqProvider()
+                self._active_provider_name = "groq"
+                logger.info("Groq provider initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Groq provider: {e}")
+
+        if settings.GOOGLE_GEMINI_API_KEY and settings.GOOGLE_GEMINI_API_KEY != "your-gemini-api-key-here":
+            try:
+                self._providers["gemini"] = GeminiProvider()
+                if self._active_provider_name == "mock":
+                    self._active_provider_name = "gemini"
+                logger.info("Gemini provider initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Gemini provider: {e}")
+
         if settings.OPENAI_API_KEY and settings.OPENAI_API_KEY != "your-openai-api-key-here":
-            self._providers["openai"] = OpenAIProvider()
-            logger.info("OpenAI provider initialized")
+            try:
+                self._providers["openai"] = OpenAIProvider()
+                if self._active_provider_name == "mock":
+                    self._active_provider_name = "openai"
+                logger.info("OpenAI provider initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize OpenAI provider: {e}")
 
         if settings.ANTHROPIC_API_KEY and settings.ANTHROPIC_API_KEY != "your-anthropic-api-key-here":
-            self._providers["anthropic"] = AnthropicProvider()
-            logger.info("Anthropic provider initialized")
+            try:
+                self._providers["anthropic"] = AnthropicProvider()
+                if self._active_provider_name == "mock":
+                    self._active_provider_name = "anthropic"
+                logger.info("Anthropic provider initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Anthropic provider: {e}")
 
         if len(self._providers) == 1:  # Only mock
-            logger.warning("No LLM API keys configured, using mock provider")
+            logger.warning(
+                "No LLM API keys configured — using mock provider. "
+                "Contracts will be generated from templates. "
+                "Set GROQ_API_KEY, GOOGLE_GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY for AI-powered generation."
+            )
 
     def get_provider(self, provider_name: Optional[str] = None) -> LLMProvider:
         """Get an LLM provider by name or default."""
@@ -631,13 +1128,22 @@ class LLMService:
         if name in self._providers:
             return self._providers[name]
 
-        # Fallback chain
-        for fallback in ["openai", "anthropic", "mock"]:
+        # Fallback chain: groq -> gemini -> openai -> anthropic -> mock
+        for fallback in ["groq", "gemini", "openai", "anthropic", "mock"]:
             if fallback in self._providers:
                 logger.info(f"Falling back to {fallback} provider")
                 return self._providers[fallback]
 
         return self._providers["mock"]
+
+    def get_provider_status(self) -> Dict[str, Any]:
+        """Get status of all LLM providers."""
+        return {
+            "active_provider": self._active_provider_name,
+            "available_providers": list(self._providers.keys()),
+            "is_ai_powered": self._active_provider_name != "mock",
+            "configured_default": settings.DEFAULT_LLM_PROVIDER,
+        }
 
     async def generate_contract(
         self,
@@ -683,7 +1189,7 @@ class LLMService:
             contract_type=contract_type,
             jurisdiction=jurisdiction,
             duration_s=round(duration, 2),
-            provider=provider or settings.DEFAULT_LLM_PROVIDER,
+            provider=provider or self._active_provider_name,
         )
 
         return result

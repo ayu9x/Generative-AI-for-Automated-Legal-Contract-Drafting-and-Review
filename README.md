@@ -4,12 +4,14 @@
   <img src="https://img.shields.io/badge/React-18.2-61DAFB?style=for-the-badge&logo=react&logoColor=black" />
   <img src="https://img.shields.io/badge/TypeScript-5.2-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
   <img src="https://img.shields.io/badge/Vite-5.0-646CFF?style=for-the-badge&logo=vite&logoColor=white" />
+  <img src="https://img.shields.io/badge/Groq_AI-Llama_3.3_70B-F55036?style=for-the-badge&logo=meta&logoColor=white" />
+  <img src="https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
 </p>
 
 # ⚖️ Generative AI for Automated Legal Contract Drafting & Review
 
-> An enterprise-grade AI platform for autonomous legal contract drafting, risk analysis, compliance verification, and version control — powered by GPT-4 and Claude.
+> An enterprise-grade AI platform for autonomous legal contract drafting, risk analysis, compliance verification, and version control — powered by **Groq AI (Llama 3.3 70B)** with fallback support for GPT-4, Claude, and Gemini.
 
 ---
 
@@ -52,11 +54,12 @@ The backend runs in **standalone demo mode** by default — no database or Redis
 ### 🤖 Contract Generation Engine
 | Capability | Details |
 |---|---|
-| Natural Language → Contract | Describe what you need in plain English |
+| Natural Language → Contract | Describe what you need in plain English; Groq AI drafts the full contract |
 | Template Library | 200+ templates (NDA, MSA, Employment, M&A, SaaS, Licensing, etc.) |
 | Multi-Jurisdiction | 50+ jurisdictions with region-specific clauses |
 | Multi-Language | 15+ language support |
-| AI Clause Suggestions | Context-aware recommendations from GPT-4 / Claude |
+| AI Clause Suggestions | Context-aware recommendations from Groq (Llama 3.3 70B) |
+| Ultra-Fast Generation | ~3–5 seconds per contract via Groq's accelerated inference |
 
 ### 🔍 Risk Analysis & Review
 - **500+ risk factors** analyzed per contract with explainable AI
@@ -122,7 +125,7 @@ The backend runs in **standalone demo mode** by default — no database or Redis
 │  └──────────────────┘  └──────────────────┘                     │
 │  ┌──────────────────┐  ┌──────────────────┐                     │
 │  │ LLM Service      │  │ Template Engine  │                     │
-│  │ (GPT-4 / Claude) │  │ (200+ types)     │                     │
+│  │ (Groq/GPT/Claude)│  │ (200+ types)     │                     │
 │  └──────────────────┘  └──────────────────┘                     │
 └──────────────────────────┬──────────────────────────────────────┘
                            │
@@ -148,7 +151,7 @@ The backend runs in **standalone demo mode** by default — no database or Redis
 | **Backend** | FastAPI, Uvicorn, Python 3.11+ |
 | **Authentication** | JWT (python-jose), bcrypt (passlib) |
 | **Encryption** | AES-256 via Fernet (cryptography) |
-| **AI / LLM** | OpenAI GPT-4, Anthropic Claude, tiktoken |
+| **AI / LLM** | **Groq AI (Llama 3.3 70B)** (primary), OpenAI GPT-4, Anthropic Claude, Google Gemini |
 | **Database** | PostgreSQL + SQLAlchemy + Alembic (optional for demo) |
 | **Cache** | Redis (optional for demo) |
 | **Search** | Elasticsearch (optional) |
@@ -156,6 +159,7 @@ The backend runs in **standalone demo mode** by default — no database or Redis
 | **Document Processing** | python-docx, PyPDF2, Jinja2, Markdown |
 | **Monitoring** | structlog, prometheus-client |
 | **Containerization** | Docker, Docker Compose, Nginx |
+| **CI/CD** | GitHub Actions (lint, test, build, deploy) |
 
 ---
 
@@ -192,7 +196,7 @@ The backend runs in **standalone demo mode** by default — no database or Redis
 │   │   │   ├── contract_generator.py      # AI contract drafting logic
 │   │   │   ├── risk_analyzer.py           # 500+ factor risk analysis
 │   │   │   ├── compliance_checker.py      # Multi-jurisdiction compliance
-│   │   │   ├── llm_service.py             # GPT-4 / Claude integration
+│   │   │   ├── llm_service.py             # Groq / GPT-4 / Claude / Gemini integration
 │   │   │   ├── template_engine.py         # 200+ contract templates
 │   │   │   └── version_control.py         # Git-like document versioning
 │   │   └── 📂 utils/                      # Shared utilities
@@ -478,11 +482,13 @@ DEBUG=true                     # Enable hot-reload and verbose logging
 SECRET_KEY=your-secret-key     # JWT signing key (min 32 chars)
 ENCRYPTION_KEY=your-enc-key    # AES-256 encryption key (32 bytes)
 
-# ── LLM (leave empty for mock/demo mode) ─────
-OPENAI_API_KEY=                # Your OpenAI API key for GPT-4
-ANTHROPIC_API_KEY=             # Your Anthropic API key for Claude
-DEFAULT_LLM_PROVIDER=openai   # openai | anthropic
-DEFAULT_LLM_MODEL=gpt-4       # gpt-4 | gpt-3.5-turbo | claude-3
+# ── LLM (Groq is the primary provider) ───────
+GROQ_API_KEY=                  # Your Groq API key (primary — fastest)
+OPENAI_API_KEY=                # Your OpenAI API key for GPT-4 (fallback)
+ANTHROPIC_API_KEY=             # Your Anthropic API key for Claude (fallback)
+GOOGLE_GEMINI_API_KEY=         # Your Google Gemini API key (fallback)
+DEFAULT_LLM_PROVIDER=groq     # groq | openai | anthropic | gemini
+DEFAULT_LLM_MODEL=llama-3.3-70b-versatile  # Groq model
 
 # ── Database (optional for demo) ─────────────
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/legal_contracts
@@ -494,7 +500,7 @@ REDIS_URL=redis://localhost:6379/0
 CORS_ORIGINS=["http://localhost:3000","http://localhost:5173","http://localhost:8000"]
 ```
 
-> **Tip:** The app runs fully without PostgreSQL, Redis, or LLM API keys. It uses in-memory stores and a mock LLM provider by default — perfect for development and demos.
+> **Tip:** The app runs fully without PostgreSQL, Redis, or LLM API keys. It uses in-memory stores and a mock LLM provider by default. Set `GROQ_API_KEY` for instant AI-powered contract generation via Groq's ultra-fast inference.
 
 ---
 
@@ -523,6 +529,36 @@ The Docker setup includes:
 - Nginx reverse proxy
 
 See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for production deployment instructions.
+
+---
+
+## 🔄 CI/CD Pipeline
+
+This project includes a **GitHub Actions** CI/CD pipeline (`.github/workflows/ci.yml`) that runs automatically on every push and pull request.
+
+### Pipeline Stages
+
+| Stage | Description |
+|---|---|
+| **🔍 Lint** | Runs `flake8` on Python backend code |
+| **🧪 Test** | Runs `pytest` backend unit tests |
+| **🏗️ Build Frontend** | Installs dependencies and builds the React/Vite frontend |
+| **🐳 Docker Build** | Builds backend and frontend Docker images |
+
+### Triggers
+
+- **Push** to `main` or `develop` branches
+- **Pull Requests** targeting `main`
+
+### Required Secrets
+
+Add the following secrets in your GitHub repository settings (`Settings → Secrets → Actions`):
+
+| Secret | Description | Required? |
+|---|---|---|
+| `GROQ_API_KEY` | Groq API key for AI-powered tests | ❌ Optional |
+
+> **Note:** The CI pipeline runs tests using the mock LLM provider by default, so no API keys are required for CI to pass.
 
 ---
 
@@ -564,7 +600,8 @@ See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for production deployment instruc
 ## ⚠️ Known Issues
 
 - **bcrypt compatibility**: `passlib` is incompatible with `bcrypt>=4.1`. Pin to `bcrypt==4.0.1` to avoid startup errors.
-- **LLM responses**: Without valid API keys, the system uses a mock LLM provider that returns template-based responses.
+- **LLM responses**: Without valid API keys, the system uses a mock LLM provider that returns template-based responses. Set `GROQ_API_KEY` for real AI-powered contract generation.
+- **Groq rate limits**: Free Groq API tier has rate limits. If you encounter rate limit errors, the system automatically retries with exponential backoff.
 
 ---
 
@@ -575,5 +612,5 @@ This project is licensed under the [MIT License](LICENSE).
 ---
 
 <p align="center">
-  Built with ❤️ using FastAPI + React + Generative AI
+  Built with ❤️ using FastAPI + React + Groq AI (Llama 3.3 70B)
 </p>

@@ -22,15 +22,28 @@ class Base(DeclarativeBase):
     metadata = metadata
 
 
-# Create async engine
-engine = create_async_engine(
-    settings.DATABASE_URL,
-    pool_size=settings.DATABASE_POOL_SIZE,
-    max_overflow=settings.DATABASE_MAX_OVERFLOW,
-    echo=settings.DATABASE_ECHO,
-    pool_pre_ping=True,
-    pool_recycle=3600,
-)
+# Create async engine — SQLite does not support pool_size / max_overflow
+_is_sqlite = settings.DATABASE_URL.startswith("sqlite")
+
+_engine_kwargs: dict = {
+    "echo": settings.DATABASE_ECHO,
+}
+
+if _is_sqlite:
+    from sqlalchemy.pool import StaticPool
+    _engine_kwargs.update({
+        "connect_args": {"check_same_thread": False},
+        "poolclass": StaticPool,
+    })
+else:
+    _engine_kwargs.update({
+        "pool_size": settings.DATABASE_POOL_SIZE,
+        "max_overflow": settings.DATABASE_MAX_OVERFLOW,
+        "pool_pre_ping": True,
+        "pool_recycle": 3600,
+    })
+
+engine = create_async_engine(settings.DATABASE_URL, **_engine_kwargs)
 
 # Create async session factory
 async_session_factory = async_sessionmaker(

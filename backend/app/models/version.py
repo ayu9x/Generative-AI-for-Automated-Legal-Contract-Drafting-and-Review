@@ -6,7 +6,7 @@ from sqlalchemy import (
     Column, String, Boolean, DateTime, Text, Integer,
     Float, ForeignKey, JSON
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.types import Uuid as UUID
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 

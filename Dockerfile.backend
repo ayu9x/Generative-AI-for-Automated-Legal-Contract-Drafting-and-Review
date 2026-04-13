@@ -1,26 +1,40 @@
 # ── Backend Dockerfile ────────────────────────────────────────────────
-FROM python:3.11-slim as backend-base
+# Multi-stage production build for the FastAPI backend
+
+FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
-# System dependencies
+# System dependencies for building Python packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
-    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Python dependencies
+# Install Python dependencies
 COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-# Application code
+# ── Production stage ─────────────────────────────────────────────────
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Copy installed packages from builder
+COPY --from=builder /install /usr/local
+
+# Copy application code only (no tests)
 COPY backend/app ./app
-COPY backend/tests ./tests
 
-# Create non-root user
-RUN useradd --create-home appuser
+# Create non-root user and data directory
+RUN useradd --create-home --shell /bin/bash appuser \
+    && mkdir -p /app/data \
+    && chown -R appuser:appuser /app
+
 USER appuser
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--loop", "uvloop", "--http", "httptools"]

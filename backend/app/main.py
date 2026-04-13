@@ -11,6 +11,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.config import settings
 from app.api.routes import auth, contracts, review, compliance, versions
@@ -76,8 +77,8 @@ async def lifespan(app: FastAPI):
 
     # Initialize services
     try:
-        # Database initialization would go here
-        # await init_db()
+        from app.core.database import init_db
+        await init_db()
         logger.info("Database connection initialized")
     except Exception as e:
         logger.warning(f"Database not available: {e}. Running in standalone mode.")
@@ -107,7 +108,8 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down Legal AI Contract System...")
     try:
-        # await close_db()
+        from app.core.database import close_db
+        await close_db()
         logger.info("Database connections closed")
     except Exception:
         pass
@@ -119,6 +121,8 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
 
+    is_production = settings.ENVIRONMENT == "production"
+
     app = FastAPI(
         title="Legal AI Contract System",
         description=(
@@ -127,9 +131,9 @@ def create_app() -> FastAPI:
             "and version control for legal documents."
         ),
         version="1.0.0",
-        docs_url="/docs",
-        redoc_url="/redoc",
-        openapi_url="/openapi.json",
+        docs_url=None if is_production else "/docs",
+        redoc_url=None if is_production else "/redoc",
+        openapi_url=None if is_production else "/openapi.json",
         lifespan=lifespan,
     )
 
@@ -209,6 +213,8 @@ def create_app() -> FastAPI:
 
     @app.get("/health", tags=["Health"])
     async def health_check():
+        from app.services.llm_service import llm_service
+        provider_status = llm_service.get_provider_status()
         return {
             "status": "healthy",
             "environment": settings.ENVIRONMENT,
@@ -216,7 +222,7 @@ def create_app() -> FastAPI:
                 "api": "running",
                 "database": "standalone",
                 "cache": "standalone",
-                "llm": settings.LLM_PROVIDER,
+                "llm": provider_status,
             },
         }
 
@@ -233,6 +239,9 @@ def create_app() -> FastAPI:
                 "versions": "/api/v1/versions",
             },
         }
+
+    # ── Expose Prometheus Metrics ─────────────────────────────────────
+    Instrumentator().instrument(app).expose(app)
 
     return app
 

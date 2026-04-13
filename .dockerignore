@@ -1,0 +1,63 @@
+# Git
+.git
+.gitignore
+
+# Dependencies
+node_modules
+frontend/node_modules
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.mypy_cache
+.coverage
+htmlcov
+backend/venv
+backend/.pytest_cache
+backend/tests
+
+# Virtual environments
+.venv
+.venv-1
+venv
+
+# Build output
+frontend/dist
+dist
+build
+
+# Environment files
+.env
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs
+
+# Local data
+backend/data/*.db
+a11y_reports
+
+# Docker
+docker-compose*.yml
+Dockerfile.*
+
+# Docs & scripts (not needed in image)
+docs
+installer
+*.bat
+*.sh
+*.md
+build_exe.py
+monitoring

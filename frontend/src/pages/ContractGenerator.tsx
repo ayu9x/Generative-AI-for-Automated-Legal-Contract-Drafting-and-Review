@@ -10,25 +10,34 @@ const CONTRACT_TYPES = [
   { value: 'msa', label: 'Master Service Agreement (MSA)' },
   { value: 'employment', label: 'Employment Agreement' },
   { value: 'service_agreement', label: 'Service Agreement' },
+  { value: 'consulting', label: 'Consulting Agreement' },
   { value: 'license', label: 'Software License Agreement' },
   { value: 'partnership', label: 'Partnership Agreement' },
   { value: 'merger_acquisition', label: 'Merger & Acquisition' },
   { value: 'lease', label: 'Commercial Lease Agreement' },
+  { value: 'purchase_order', label: 'Purchase Order Agreement' },
+  { value: 'loan', label: 'Loan Agreement' },
+  { value: 'supply', label: 'Supply Agreement' },
+  { value: 'distribution', label: 'Distribution Agreement' },
+  { value: 'franchise', label: 'Franchise Agreement' },
+  { value: 'joint_venture', label: 'Joint Venture Agreement' },
+  { value: 'settlement', label: 'Settlement Agreement' },
 ];
 
 const JURISDICTIONS = [
   // North America
-  'US-Federal', 'US-CA', 'US-NY', 'US-TX', 'US-FL', 'CA', 'MX',
+  'US-Federal', 'US-CA', 'US-NY', 'US-TX', 'US-FL', 'US-IL',
+  'US-DE', 'US-WA', 'US-MA', 'US-GA', 'US-PA',
+  'CA-Federal', 'CA-ON', 'CA-BC', 'CA-QC', 'MX',
   // Europe
-  'EU', 'UK', 'DE', 'FR', 'IT', 'ES', 'NL', 'CH',
+  'UK', 'EU-GDPR', 'EU-DE', 'EU-FR', 'EU-ES',
+  'CH', 'SE', 'NO', 'DK', 'FI', 'NL', 'BE', 'IT', 'AT', 'IE',
   // Asia Pacific
-  'IN', 'CN', 'JP', 'SG', 'AU', 'KR', 'HK', 'MY', 'ID', 'PH', 'NZ',
+  'IN', 'JP', 'SG', 'AU', 'KR', 'HK', 'MY', 'PH', 'TH', 'NZ',
   // Middle East & Africa
   'AE', 'SA', 'IL', 'ZA', 'NG', 'KE',
   // South America
-  'BR', 'AR', 'CL', 'CO',
-  // Regulatory
-  'HIPAA', 'GDPR',
+  'BR',
 ];
 
 interface Party {
@@ -96,42 +105,45 @@ export default function ContractGenerator() {
   };
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
+    <main className="p-8 max-w-4xl mx-auto" aria-labelledby="generator-heading">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-          <Sparkles className="w-8 h-8 text-primary-600" />
+        <h1 id="generator-heading" className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+          <Sparkles className="w-8 h-8 text-primary-600" aria-hidden="true" />
           Generate Contract
         </h1>
-        <p className="text-gray-500 mt-1">
+        <p id="generator-description" className="text-gray-500 mt-1">
           Create a new AI-powered legal contract using templates and LLM enhancement.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-8" aria-labelledby="generator-heading" aria-describedby="generator-description">
         {/* Basic Info */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Contract Details</h2>
+        <section aria-labelledby="basic-info-heading" className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 id="basic-info-heading" className="text-lg font-semibold text-gray-900 mb-4">Contract Details</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="contractTitle" className="block text-sm font-medium text-gray-700 mb-1">
                 Contract Title
               </label>
               <input
+                id="contractTitle"
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
+                aria-required="true"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 placeholder="e.g., NDA between Company A and Company B"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="contractType" className="block text-sm font-medium text-gray-700 mb-1">
                 Contract Type
               </label>
               <select
+                id="contractType"
                 value={contractType}
                 onChange={(e) => setContractType(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
@@ -143,10 +155,11 @@ export default function ContractGenerator() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="jurisdiction" className="block text-sm font-medium text-gray-700 mb-1">
                 Jurisdiction
               </label>
               <select
+                id="jurisdiction"
                 value={jurisdiction}
                 onChange={(e) => setJurisdiction(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
@@ -157,27 +170,30 @@ export default function ContractGenerator() {
               </select>
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Parties */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <section aria-labelledby="parties-heading" className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Contract Parties</h2>
+            <h2 id="parties-heading" className="text-lg font-semibold text-gray-900">Contract Parties</h2>
             <button
               type="button"
               onClick={addParty}
               className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700"
+              aria-label="Add a new party"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4" aria-hidden="true" />
               Add Party
             </button>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4" role="group" aria-label="Parties list">
             {parties.map((party, index) => (
               <div key={index} className="flex gap-4 items-start">
                 <div className="flex-1">
+                  <label htmlFor={`party-name-${index}`} className="sr-only">Party name {index + 1}</label>
                   <input
+                    id={`party-name-${index}`}
                     type="text"
                     value={party.name}
                     onChange={(e) => {
@@ -190,7 +206,9 @@ export default function ContractGenerator() {
                   />
                 </div>
                 <div className="w-48">
+                  <label htmlFor={`party-role-${index}`} className="sr-only">Party role {index + 1}</label>
                   <input
+                    id={`party-role-${index}`}
                     type="text"
                     value={party.role}
                     onChange={(e) => {
@@ -207,22 +225,24 @@ export default function ContractGenerator() {
                     type="button"
                     onClick={() => removeParty(index)}
                     className="p-2 text-gray-400 hover:text-red-500"
+                    aria-label={`Remove party ${index + 1}`}
                   >
-                    <X className="w-5 h-5" />
+                    <X className="w-5 h-5" aria-hidden="true" />
                   </button>
                 )}
               </div>
             ))}
           </div>
-        </div>
+        </section>
 
         {/* Variables */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Contract Variables</h2>
+        <section aria-labelledby="variables-heading" className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 id="variables-heading" className="text-lg font-semibold text-gray-900 mb-4">Contract Variables</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Effective Date</label>
+              <label htmlFor="effectiveDate" className="block text-sm font-medium text-gray-700 mb-1">Effective Date</label>
               <input
+                id="effectiveDate"
                 type="date"
                 value={variables.effective_date}
                 onChange={(e) => setVariables({ ...variables, effective_date: e.target.value })}
@@ -230,8 +250,9 @@ export default function ContractGenerator() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Term (Years)</label>
+              <label htmlFor="termYears" className="block text-sm font-medium text-gray-700 mb-1">Term (Years)</label>
               <input
+                id="termYears"
                 type="number"
                 value={variables.term_years}
                 onChange={(e) => setVariables({ ...variables, term_years: e.target.value })}
@@ -240,8 +261,9 @@ export default function ContractGenerator() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Governing State</label>
+              <label htmlFor="governingState" className="block text-sm font-medium text-gray-700 mb-1">Governing State</label>
               <input
+                id="governingState"
                 type="text"
                 value={variables.governing_state}
                 onChange={(e) => setVariables({ ...variables, governing_state: e.target.value })}
@@ -249,11 +271,11 @@ export default function ContractGenerator() {
               />
             </div>
           </div>
-        </div>
+        </section>
 
         {/* AI Enhancement */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">AI Enhancement</h2>
+        <section aria-labelledby="ai-enhancement-heading" className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 id="ai-enhancement-heading" className="text-lg font-semibold text-gray-900 mb-4">AI Enhancement</h2>
 
           <div className="flex items-center gap-3 mb-4">
             <input
@@ -269,10 +291,11 @@ export default function ContractGenerator() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="specialReqs" className="block text-sm font-medium text-gray-700 mb-1">
               Special Requirements
             </label>
             <textarea
+              id="specialReqs"
               value={specialRequirements}
               onChange={(e) => setSpecialRequirements(e.target.value)}
               rows={4}
@@ -280,7 +303,7 @@ export default function ContractGenerator() {
               placeholder="Any specific clauses, provisions, or requirements..."
             />
           </div>
-        </div>
+        </section>
 
         {/* Submit */}
         <div className="flex justify-end gap-4">
@@ -294,19 +317,20 @@ export default function ContractGenerator() {
           <button
             type="submit"
             disabled={generateMutation.isPending}
+            aria-busy={generateMutation.isPending}
             className="px-6 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 disabled:opacity-50 transition-colors flex items-center gap-2"
           >
             {generateMutation.isPending ? (
               <>Generating...</>
             ) : (
               <>
-                <Sparkles className="w-5 h-5" />
+                <Sparkles className="w-5 h-5" aria-hidden="true" />
                 Generate Contract
               </>
             )}
           </button>
         </div>
       </form>
-    </div>
+    </main>
   );
 }
